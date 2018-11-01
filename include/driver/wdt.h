@@ -5,8 +5,8 @@
  *  Copyright (c) 2018-2019 Mutant Industries ltd.
  */
 
-#ifndef _SYS_DRIVER_WDT_H_
-#define _SYS_DRIVER_WDT_H_
+#ifndef _DRIVER_WDT_H_
+#define _DRIVER_WDT_H_
 
 #include <driver/config.h>
 
@@ -28,19 +28,19 @@
 /**
  * Stop WDT
  */
-#define __WDT_hold() \
+#define WDT_hold() \
     WDTCTL = WDTPW | WDTHOLD | (WDTCTL & (WDTSSEL | WDTTMSEL | WDTIS));
 
 /**
  * Start / continue
  */
-#define __WDT_start() \
+#define WDT_start() \
     __WDT_set__(0, WDTCTL & (WDTSSEL | WDTTMSEL | WDTIS), 0, _TMSEL_);
 
 /**
  * Clear WDT internal counter
  */
-#define __WDT_clr() \
+#define WDT_clr() \
     __WDT_set__(WDTCNTCL, WDTCTL & (WDTHOLD | WDTSSEL | WDTTMSEL | WDTIS), 0, _TMSEL_);
 
 /**
@@ -50,7 +50,7 @@
  *  - VLOCLK
  *  - BCLK (or something else, see device-specific datasheet)
  */
-#define __WDT_ssel(source) \
+#define WDT_ssel(source) \
     __WDT_set__(__WDT_param_expand__(WDTSSEL__, source), WDTCTL & (WDTHOLD | WDTIS), 0, _TMSEL_);
 
 /**
@@ -64,13 +64,13 @@
  *  - 128M
  *  - 2G
  */
-#define __WDT_clr_interval(clock_cycle_count) \
+#define WDT_clr_interval(clock_cycle_count) \
     __WDT_set__(__WDT_param_expand__(WDTIS__, clock_cycle_count), WDTCTL & WDTSSEL, WDTCNTCL, _TMSEL_);
 
 /**
  * Clear and set WDT for specified clock cycle count, set clock source
  */
-#define __WDT_clr_ssel_interval(source, clock_cycle_count) \
+#define WDT_clr_ssel_interval(source, clock_cycle_count) \
     __WDT_set__(__WDT_param_expand__(WDTIS__, clock_cycle_count), __WDT_param_expand__(WDTSSEL__, source), WDTCNTCL, _TMSEL_);
 
 /**
@@ -86,34 +86,34 @@
 /**
  * Save current WDT state, stop WDT
  */
-#define __WDT_backup_hold() \
+#define WDT_backup_hold() \
     __WDT_backup__(); \
-    __WDT_hold();
+    WDT_hold();
 
 /**
  * Save current WDT state, clear and set WDT for specified clock cycle count
  */
-#define __WDT_backup_clr_interval(clock_cycle_count) \
+#define WDT_backup_clr_interval(clock_cycle_count) \
     __WDT_backup__(); \
     __WDT_set__(__WDT_param_expand__(WDTIS__, clock_cycle_count), _WDT_STATE_ & WDTSSEL, WDTCNTCL, _TMSEL_);
 
 /**
  * Save current WDT state, clear and set WDT for specified clock cycle count, set clock source
  */
-#define __WDT_backup_clr_ssel_interval(source, clock_cycle_count) \
+#define WDT_backup_clr_ssel_interval(source, clock_cycle_count) \
     __WDT_backup__(); \
-    __WDT_clr_ssel_interval(source, clock_cycle_count);
+    WDT_clr_ssel_interval(source, clock_cycle_count);
 
 /**
  * Recover saved state of WDT
  */
-#define __WDT_restore() \
+#define WDT_restore() \
     WDTCTL = WDTPW | _WDT_STATE_;
 
 /**
  * Recover saved state of WDT, clear WDT
  */
-#define __WDT_clr_restore() \
+#define WDT_clr_restore() \
     WDTCTL = WDTPW | WDTCNTCL | _WDT_STATE_;
 
 // ---------- private api --------------------
@@ -131,14 +131,14 @@
     WDTCTL = WDTPW | (param_1) | (param_2) | (param_3) | (mode_select);
 
 #else
+#define WDT_backup_hold() WDT_hold()
+#define WDT_backup_clr_interval(...)
+#define WDT_backup_clr_ssel_interval(...)
+#define WDT_restore()
+#define WDT_clr_restore()
 #define __WDT_backup__()
-#define __WDT_backup_hold() __WDT_hold()
-#define __WDT_backup_clr_interval(...)
-#define __WDT_backup_clr_ssel_interval(...)
-#define __WDT_restore()
-#define __WDT_clr_restore()
 #define __WDT_set__(...)
 #endif
 
 
-#endif /* _SYS_DRIVER_WDT_H_ */
+#endif /* _DRIVER_WDT_H_ */

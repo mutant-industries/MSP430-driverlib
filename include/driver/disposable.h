@@ -5,8 +5,8 @@
  *  Copyright (c) 2018-2019 Mutant Industries ltd.
  */
 
-#ifndef _SYS_DRIVER_DISPOSABLE_H_
-#define _SYS_DRIVER_DISPOSABLE_H_
+#ifndef _DRIVER_DISPOSABLE_H_
+#define _DRIVER_DISPOSABLE_H_
 
 #include <driver/config.h>
 
@@ -43,7 +43,7 @@ struct Disposable {
 
 };
 
-#define __register_dispose_hook(handle, dispose_hook) \
+#define __dispose_hook_register(handle, dispose_hook) \
         ((Dispose_hook_t *) (handle))->_dispose_hook = (dispose_function_t) (dispose_hook);
 
 #endif
@@ -62,4 +62,4 @@ struct Disposable {
 void __do_dispose(Dispose_hook_t *handle);
 
 
-#endif /* _SYS_DRIVER_DISPOSABLE_H_ */
+#endif /* _DRIVER_DISPOSABLE_H_ */

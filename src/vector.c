@@ -1,70 +1,197 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2018-2019 Mutant Industries ltd.
 #include <stddef.h>
+#include <lib/cpp/repeat.h>
 #include <driver/vector.h>
+#include <driver/cpu.h>
+#include <driver/critical.h>
 
 // -------------------------------------------------------------------------------------
 
-static void _trigger(Vector_handle_t *_this) {
-    *((volatile uint16_t *) _this->_IFG_register) |= _this->_IFG_mask;
+#ifndef __VECTOR_SLOT_COUNT__
+#define __VECTOR_SLOT_COUNT__       8
+#endif
+
+// -------------------------------------------------------------------------------------
+
+static Vector_slot_t _vector_slot_array[__VECTOR_SLOT_COUNT__];
+
+// interrupt handler function name generator
+#define __interrupt_handler_name_generator(no) _vector_slot_ ## no
+#define __interrupt_handler_array_generator(no, _) __interrupt_handler_name_generator(no),
+
+// interrupt handler generator
+#define __interrupt_handler_generator(no, _)                                                            \
+void __attribute__((interrupt, section(".text:_isr"))) __interrupt_handler_name_generator(no) () {      \
+    Vector_slot_t *slot = &_vector_slot_array[no];                                                      \
+    (*slot->_handler)(slot->_handler_param);                                                            \
 }
 
-static void _clear_interrupt_flag(Vector_handle_t *_this) {
-    *((volatile uint16_t *) _this->_IFG_register) &= ~_this->_IFG_mask;
+// generate slot interrupt handler definitions
+REPEAT(__VECTOR_SLOT_COUNT__, __interrupt_handler_generator)
+
+// generate array of pointers to previously generated handlers
+static void (*_vector_slot_handler_array[__VECTOR_SLOT_COUNT__])(void) = {
+    REPEAT(__VECTOR_SLOT_COUNT__, __interrupt_handler_array_generator)
+};
+
+// -------------------------------------------------------------------------------------
+
+static uint8_t _trigger(Vector_handle_t *_this) {
+    if ( ! _this->_IFG_register) {
+        return VECTOR_IFG_REG_NOT_SET;
+    }
+    if ( ! _this->_IFG_mask) {
+        return VECTOR_IFG_MASK_NOT_SET;
+    }
+
+    hw_register_16(_this->_IFG_register) |= _this->_IFG_mask;
+
+    return VECTOR_OK;
 }
 
-static void _set_enabled(Vector_handle_t *_this, bool enabled) {
+static uint8_t _clear_interrupt_flag(Vector_handle_t *_this) {
+    if ( ! _this->_IFG_register) {
+        return VECTOR_IFG_REG_NOT_SET;
+    }
+    if ( ! _this->_IFG_mask) {
+        return VECTOR_IFG_MASK_NOT_SET;
+    }
+
+    hw_register_16(_this->_IFG_register) &= ~_this->_IFG_mask;
+
+    return VECTOR_OK;
+}
+
+static uint8_t _set_enabled(Vector_handle_t *_this, bool enabled) {
     if (_this->enabled == enabled) {
-        return;
+        return VECTOR_OK;
     }
 
     _this->enabled = enabled;
 
-    if ( ! _this->_IE_register || ! _this->_IE_mask) {
-        return;
+    if ( ! _this->_IE_register) {
+        return VECTOR_IE_REG_NOT_SET;
+    }
+
+    if ( ! _this->_IE_mask) {
+        return VECTOR_IE_MASK_NOT_SET;
     }
 
     if (enabled) {
-        *((volatile uint16_t *) _this->_IE_register) |= _this->_IE_mask;
+        hw_register_16(_this->_IE_register) |= _this->_IE_mask;
     }
     else {
-        *((volatile uint16_t *) _this->_IE_register) &= ~_this->_IE_mask;
+        hw_register_16(_this->_IE_register) &= ~_this->_IE_mask;
     }
+
+    return VECTOR_OK;
 }
 
-static void _register_handler(Vector_handle_t *_this, void (*handler)(void), bool reversible) {
+static uint8_t _register_raw_handler(Vector_handle_t *_this, void (*handler)(void), bool reversible) {
     if (reversible && ! _this->_vector_original_content) {
         _this->_vector_original_content = __vector(_this->_vector_no);
     }
 
     __vector_set(_this->_vector_no, handler);
+
+    return VECTOR_OK;
 }
 
 // -------------------------------------------------------------------------------------
 
-static dispose_function_t _vector_deregister(Vector_handle_t *_this) {
-
-    if (_this->set_enabled) {
-        _this->set_enabled(_this, false);
-    }
-
+// Vector_slot_t destructor
+static dispose_function_t _vector_slot_release(Vector_slot_t *_this) {
     if (_this->_vector_original_content) {
         __vector_set(_this->_vector_no, _this->_vector_original_content);
     }
 
     _this->_vector_original_content = NULL;
+    _this->_vector_no = NULL;
+    _this->_handler_param = NULL;
+    _this->_handler = NULL;
 
-    return _this->_dispose_hook;
+    return NULL;
+}
+
+// Vector_slot_t constructor
+static void _vector_slot_register(Vector_slot_t *slot, uint8_t vector_no, void (*interrupt_handler)(void),
+              void (*handler)(void *), void *handler_param) {
+
+    // private
+    slot->_handler = handler;
+    slot->_handler_param = handler_param;
+    slot->_vector_no = vector_no;
+    slot->_vector_original_content = __vector(slot->_vector_no);
+
+    __vector_set(slot->_vector_no, interrupt_handler);
+
+    __dispose_hook_register(slot, _vector_slot_release);
 }
 
 // -------------------------------------------------------------------------------------
 
-// default constructor
+static Vector_slot_t *_register_handler(Vector_handle_t *_this, void (*handler)(void *), void *handler_param) {
+    Vector_slot_t *slot_iter = _vector_slot_array;
+    void (**slot_handler_iter)(void) = _vector_slot_handler_array;
+    uint8_t i;
+
+    critical_section_enter();
+
+    dispose(_this->_slot);
+
+    for (i = 0; i < __VECTOR_SLOT_COUNT__; i++, slot_iter++, slot_handler_iter++) {
+        if ( ! slot_iter->_handler) {
+            _this->_slot = slot_iter;
+            _vector_slot_register(_this->_slot, _this->_vector_no, *slot_handler_iter, handler, handler_param);
+
+            break;
+        }
+    }
+
+    critical_section_exit();
+
+    return _this->_slot;
+}
+
+static uint8_t _disable_slot_release_on_dispose(Vector_handle_t *_this) {
+    _this->_slot = NULL;
+
+    return VECTOR_OK;
+}
+
+// -------------------------------------------------------------------------------------
+
+// Vector_handle_t destructor
+static dispose_function_t _vector_handle_release(Vector_handle_t *_this) {
+
+    if (_this->set_enabled) {
+        _this->set_enabled(_this, false);
+    }
+
+    dispose(_this->_slot);
+
+    if (_this->_vector_original_content) {
+        __vector_set(_this->_vector_no, _this->_vector_original_content);
+    }
+
+    _this->_vector_no = NULL;
+    _this->_IE_register = NULL;
+    _this->_IE_mask = NULL;
+    _this->_IFG_register = NULL;
+    _this->_IFG_mask = NULL;
+    _this->_vector_original_content = NULL;
+    _this->_slot = NULL;
+
+    return _this->_dispose_hook;
+}
+
+// Vector_handle_t constructor
 void vector_handle_register(Vector_handle_t *handle, dispose_function_t dispose_hook,
-        uint16_t vector_no, uint16_t IE_register, uint16_t IE_mask, uint16_t IFG_register, uint16_t IFG_mask) {
+        uint8_t vector_no, uint16_t IE_register, uint16_t IE_mask, uint16_t IFG_register, uint16_t IFG_mask) {
 
     // private
-    handle->_vector_no= vector_no;
+    handle->_vector_no = vector_no;
     handle->_IE_register = IE_register;
     handle->_IE_mask = IE_mask;
     handle->_IFG_register = IFG_register;
@@ -72,15 +199,20 @@ void vector_handle_register(Vector_handle_t *handle, dispose_function_t dispose_
     handle->_dispose_hook = dispose_hook;
 
     // state
-    if (IE_register && IE_mask) {
-        handle->enabled = (bool) (*((volatile uint16_t *) IE_register) & IE_mask);
-    }
+    handle->_slot = NULL;
+    handle->_vector_original_content = NULL;
 
     // public api
     handle->trigger = _trigger;
     handle->clear_interrupt_flag = _clear_interrupt_flag;
     handle->set_enabled = _set_enabled;
+    handle->register_raw_handler = _register_raw_handler;
     handle->register_handler = _register_handler;
+    handle->disable_slot_release_on_dispose = _disable_slot_release_on_dispose;
 
-    __register_dispose_hook(handle, _vector_deregister);
+    if (IE_register && IE_mask) {
+        handle->enabled = (bool) (hw_register_16(IE_register) & IE_mask);
+    }
+
+    __dispose_hook_register(handle, _vector_handle_release);
 }

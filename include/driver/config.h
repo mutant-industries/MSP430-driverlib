@@ -5,8 +5,8 @@
  *  Copyright (c) 2018-2019 Mutant Industries ltd.
  */
 
-#ifndef _SYS_DRIVER_CONFIG_H_
-#define _SYS_DRIVER_CONFIG_H_
+#ifndef _DRIVER_CONFIG_H_
+#define _DRIVER_CONFIG_H_
 
 
 /**
@@ -38,7 +38,12 @@
  */
 //#define __CRITICAL_SECTION_WDT_DEFAULT_SOURCE__     SMCLK
 
+/**
+ * Count of general-purpose vector slots usually wrapped by drivers, default [8]
+ */
+//#define __VECTOR_SLOT_COUNT__     8
+
 // -------------------------------------------------------------------------------------
 
 
-#endif /* _SYS_DRIVER_CONFIG_H_ */
+#endif /* _DRIVER_CONFIG_H_ */
