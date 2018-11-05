@@ -24,17 +24,17 @@
  * Save status register, disable interrupt,
  * save current WDT state, clear and set WDT for specified clock cycle count, set default WDT clock source
  */
-#define critical_section_WDT_interval_enter(clock_cycle_count) \
+#define critical_section_WDT_interval_enter(clock_cycle_cnt) \
     critical_section_enter(); \
-    WDT_backup_clr_ssel_interval(__CRITICAL_SECTION_WDT_DEFAULT_SOURCE__, clock_cycle_count);
+    WDT_backup_clr_ssel_interval(__CRITICAL_SECTION_WDT_DEFAULT_SOURCE__, clock_cycle_cnt);
 
 /**
  * Save status register, disable interrupt,
  * save current WDT state, clear and set WDT for specified clock cycle count, set WDT clock source
  */
-#define critical_section_WDT_ssel_interval_enter(source, clock_cycle_count) \
+#define critical_section_WDT_ssel_interval_enter(source, clock_cycle_cnt) \
     critical_section_enter(); \
-    WDT_backup_clr_ssel_interval(source, clock_cycle_count);
+    WDT_backup_clr_ssel_interval(source, clock_cycle_cnt);
 
 /**
  * Recover saved state of status register, recover saved state of WDT, clear WDT

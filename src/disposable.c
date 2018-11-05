@@ -15,3 +15,11 @@ void __do_dispose(Dispose_hook_t *handle) {
         dispose_hook = (dispose_function_t) (*dispose_hook)(handle);
     }
 }
+
+void __do_zerofill(void *handle, uint16_t size) {
+    uint16_t i;
+
+    for (i = 0; i < size; i++) {
+        *((uint8_t *) handle) = 0;
+    }
+}

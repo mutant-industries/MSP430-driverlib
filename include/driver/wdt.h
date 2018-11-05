@@ -64,14 +64,14 @@
  *  - 128M
  *  - 2G
  */
-#define WDT_clr_interval(clock_cycle_count) \
-    __WDT_set__(__WDT_param_expand__(WDTIS__, clock_cycle_count), WDTCTL & WDTSSEL, WDTCNTCL, _TMSEL_);
+#define WDT_clr_interval(clock_cycle_cnt) \
+    __WDT_set__(__WDT_param_expand__(WDTIS__, clock_cycle_cnt), WDTCTL & WDTSSEL, WDTCNTCL, _TMSEL_);
 
 /**
  * Clear and set WDT for specified clock cycle count, set clock source
  */
-#define WDT_clr_ssel_interval(source, clock_cycle_count) \
-    __WDT_set__(__WDT_param_expand__(WDTIS__, clock_cycle_count), __WDT_param_expand__(WDTSSEL__, source), WDTCNTCL, _TMSEL_);
+#define WDT_clr_ssel_interval(source, clock_cycle_cnt) \
+    __WDT_set__(__WDT_param_expand__(WDTIS__, clock_cycle_cnt), __WDT_param_expand__(WDTSSEL__, source), WDTCNTCL, _TMSEL_);
 
 /**
  * Expand and concatenate macro params
@@ -93,16 +93,16 @@
 /**
  * Save current WDT state, clear and set WDT for specified clock cycle count
  */
-#define WDT_backup_clr_interval(clock_cycle_count) \
+#define WDT_backup_clr_interval(clock_cycle_cnt) \
     __WDT_backup__(); \
-    __WDT_set__(__WDT_param_expand__(WDTIS__, clock_cycle_count), _WDT_STATE_ & WDTSSEL, WDTCNTCL, _TMSEL_);
+    __WDT_set__(__WDT_param_expand__(WDTIS__, clock_cycle_cnt), _WDT_STATE_ & WDTSSEL, WDTCNTCL, _TMSEL_);
 
 /**
  * Save current WDT state, clear and set WDT for specified clock cycle count, set clock source
  */
-#define WDT_backup_clr_ssel_interval(source, clock_cycle_count) \
+#define WDT_backup_clr_ssel_interval(source, clock_cycle_cnt) \
     __WDT_backup__(); \
-    WDT_clr_ssel_interval(source, clock_cycle_count);
+    WDT_clr_ssel_interval(source, clock_cycle_cnt);
 
 /**
  * Recover saved state of WDT

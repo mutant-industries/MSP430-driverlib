@@ -8,6 +8,7 @@
 #ifndef _DRIVER_DISPOSABLE_H_
 #define _DRIVER_DISPOSABLE_H_
 
+#include <stdint.h>
 #include <driver/config.h>
 
 // --------------------------------------------------------------------------------------
@@ -51,15 +52,26 @@ struct Disposable {
 // --------------------------------------------------------------------------------------
 
 /**
- * Execute dispose hook chain on given handle, shortcut to __do_dispose(Dispose_hook_t *)
+ * Execute dispose hook chain on given handle
  */
 #define dispose(handle) \
     __do_dispose((Dispose_hook_t *) (handle));
 
 /**
+ * Zerofill given structure
+ */
+#define zerofill(handle) \
+    __do_zerofill((void *) (handle), sizeof(*(handle)));
+
+/**
  * Typesafe dispose(*), internal use only
  */
 void __do_dispose(Dispose_hook_t *handle);
+
+/**
+ * Zerofill structure on given address of given size
+ */
+void __do_zerofill(void *handle, uint16_t size);
 
 
 #endif /* _DRIVER_DISPOSABLE_H_ */

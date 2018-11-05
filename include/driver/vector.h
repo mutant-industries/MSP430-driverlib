@@ -86,14 +86,14 @@
 typedef struct Vector_slot {
     // enable dispose(Vector_slot_t *)
     Disposable_t _disposable;
-    // vector interrupt service handler
-    void (*_handler)(void *);
     // vector interrupt service handler parameter
     void *_handler_param;
     // address of interrupt vector
     uint8_t _vector_no;
     // original vector handler, restored on dispose
     uint16_t _vector_original_content;
+    // vector interrupt service handler
+    void (*_handler)(void *);
 
 } Vector_slot_t;
 
@@ -113,11 +113,13 @@ typedef struct Vector_handle {
     uint16_t _IFG_mask;
     // function to be called on dispose
     dispose_function_t _dispose_hook;
+
     // -------- state --------
     // assigned slot via register_handler()
     Vector_slot_t *_slot;
     // original vector handler, restored on dispose
     uint16_t _vector_original_content;
+
     // -------- public api --------
     // trigger interrupt, so that registered handler shall be executed
     uint8_t (*trigger)(struct Vector_handle *_this);

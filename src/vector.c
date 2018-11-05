@@ -106,10 +106,7 @@ static dispose_function_t _vector_slot_release(Vector_slot_t *_this) {
         __vector_set(_this->_vector_no, _this->_vector_original_content);
     }
 
-    _this->_vector_original_content = NULL;
-    _this->_vector_no = NULL;
-    _this->_handler_param = NULL;
-    _this->_handler = NULL;
+    zerofill(_this);
 
     return NULL;
 }
@@ -135,6 +132,10 @@ static Vector_slot_t *_register_handler(Vector_handle_t *_this, void (*handler)(
     Vector_slot_t *slot_iter = _vector_slot_array;
     void (**slot_handler_iter)(void) = _vector_slot_handler_array;
     uint8_t i;
+
+    if ( ! _this->_vector_no) {
+        return NULL;
+    }
 
     critical_section_enter();
 

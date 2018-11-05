@@ -43,6 +43,19 @@
  */
 //#define __VECTOR_SLOT_COUNT__     8
 
+/**
+ * MSP430 1xx, 2xx, 3xx and 4xx have only one Timer_A and (except 3xx) one Timer_B. On these devices the driver
+ * cannot support both timers, since both have different (max) number of CCRn channels and IV register behaves differently.
+ * On these devices the support for both timers can be achieved by
+ *  - either defining __TIMER_A_LEGACY_SUPPORT__ and manually editing _IV_register on Timer_driver_t for Timer_B after registered
+ *  - or manually editing _IV_register on Timer_driver_t for Timer_A after registered
+ * In the first case the possibility to use overflow handle on Timer_B is lost. In the second case the possibility
+ * to use overflow handle on Timer_A is lost.
+ *  - if used with PrimerOS kernel, one of those drivers with no support for overflow handle can be used to create
+ * handles for kernel timing, since it does not need the overflow handle anyway.
+ */
+//#define __TIMER_A_LEGACY_SUPPORT__
+
 // -------------------------------------------------------------------------------------
 
 
