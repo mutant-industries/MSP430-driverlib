@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2018-2019 Mutant Industries ltd.
 #include <stddef.h>
+#include <compiler.h>
 #include <driver/timer.h>
 #include <driver/cpu.h>
 #include <driver/critical.h>
@@ -217,87 +218,35 @@ static void _set_compare_value(Timer_channel_handle_t *_this, uint16_t value) {
 
 // -------------------------------------------------------------------------------------
 
-static void __attribute__((naked)) _shared_vector_handler(Timer_driver_t *driver) {
+static void _shared_vector_handler(Timer_driver_t *driver) {
+    uint16_t interrupt_source;
+    Timer_channel_handle_t *handle;
 
-    __asm__(
-        "   MOVX.W %c[iv_register_offset](R12),R14 ; \n"
-        "   ADD @R14,PC ; \n"
-        "   RETA ; \n"
-        "   JMP CCIFG_1_HND ; Vector 2 \n"
-        "   JMP CCIFG_2_HND ; Vector 4 \n"
-        "   JMP CCIFG_3_HND ; Vector 6 \n"
-        "   JMP CCIFG_4_HND ; Vector 8 \n"
-#ifndef __TIMER_A_LEGACY_SUPPORT__
-        "   JMP CCIFG_5_HND ; Vector 10 \n"
-        "   JMP CCIFG_6_HND ; Vector 12 \n"
-#endif
-        "TIFG_HND: \n"
-        "   MOVX.A %c[overflow_handle_offset](R12),R14 ; \n"
-        "   MOVX.A %c[handler_param_offset](R14),R12 ; \n"
-        "   MOVX.A %c[handler_offset](R14),R14 ; \n"
-        "   CALLA R14 ; \n"
-        "   RETA ; \n"
-        "CCIFG_1_HND: \n"
-        "   MOVX.A %c[ccr1_handle_offset](R12),R14 ; \n"
-        "   MOVX.A %c[handler_param_offset](R14),R12 ; \n"
-        "   MOVX.A %c[handler_offset](R14),R14 ; \n"
-        "   CALLA R14 ; \n"
-        "   RETA ; \n"
-        "CCIFG_2_HND: \n"
-        "   MOVX.A %c[ccr2_handle_offset](R12),R14 ; \n"
-        "   MOVX.A %c[handler_param_offset](R14),R12 ; \n"
-        "   MOVX.A %c[handler_offset](R14),R14 ; \n"
-        "   CALLA R14 ; \n"
-        "   RETA ; \n"
-        "CCIFG_3_HND: \n"
-        "   MOVX.A %c[ccr3_handle_offset](R12),R14 ; \n"
-        "   MOVX.A %c[handler_param_offset](R14),R12 ; \n"
-        "   MOVX.A %c[handler_offset](R14),R14 ; \n"
-        "   CALLA R14 ; \n"
-        "   RETA ; \n"
-        "CCIFG_4_HND: \n"
-        "   MOVX.A %c[ccr4_handle_offset](R12),R14 ; \n"
-        "   MOVX.A %c[handler_param_offset](R14),R12 ; \n"
-        "   MOVX.A %c[handler_offset](R14),R14 ; \n"
-        "   CALLA R14 ; \n"
-        "   RETA ; \n"
-        "CCIFG_5_HND: \n"
-        "   MOVX.A %c[ccr5_handle_offset](R12),R14 ; \n"
-        "   MOVX.A %c[handler_param_offset](R14),R12 ; \n"
-        "   MOVX.A %c[handler_offset](R14),R14 ; \n"
-        "   CALLA R14 ; \n"
-        "   RETA ; \n"
-        "CCIFG_6_HND: \n"
-        "   MOVX.A %c[ccr6_handle_offset](R12),R14 ; \n"
-        "   MOVX.A %c[handler_param_offset](R14),R12 ; \n"
-        "   MOVX.A %c[handler_offset](R14),R14 ; \n"
-        "   CALLA R14 ; \n"
-        "   RETA ; \n"  ::
-        [iv_register_offset] "i" (offsetof(Timer_driver_t, _IV_register)),
-        [overflow_handle_offset] "i" (offsetof(Timer_driver_t, _overflow_handle)),
-        [ccr1_handle_offset] "i" (offsetof(Timer_driver_t, _CCR1_handle)),
-        [ccr2_handle_offset] "i" (offsetof(Timer_driver_t, _CCR2_handle)),
-        [ccr3_handle_offset] "i" (offsetof(Timer_driver_t, _CCR3_handle)),
-        [ccr4_handle_offset] "i" (offsetof(Timer_driver_t, _CCR4_handle)),
-        [ccr5_handle_offset] "i" (offsetof(Timer_driver_t, _CCR5_handle)),
-        [ccr6_handle_offset] "i" (offsetof(Timer_driver_t, _CCR6_handle)),
-        [handler_offset] "i" (offsetof(Timer_channel_handle_t, _handler)),
-        [handler_param_offset] "i" (offsetof(Timer_channel_handle_t, _handler_param)) :
-    );
+    if ( ! (interrupt_source = hw_register_16(driver->_IV_register))) {
+        return;
+    }
+
+    handle = *((Timer_channel_handle_t **) (((uintptr_t)(&driver->_CCR0_handle)) + (interrupt_source * _POINTER_SIZE_ / 2)));
+
+    (*handle->_handler)(handle->_handler_param);
 }
 
 static Vector_slot_t * _register_handler_shared(Timer_channel_handle_t *_this, void (*handler)(void *), void *handler_param) {
 
+    critical_section_enter();
+
     if ( ! _this->_driver->_slot) {
         _this->_driver->_slot = _this->_register_handler_parent(&_this->vector, (void (*)(void *)) _shared_vector_handler, _this->_driver);
-
-        if ( ! _this->_driver->_slot) {
-            return NULL;
-        }
-
-        // handle dispose preserves created vector slot
-        _this->vector.disable_slot_release_on_dispose(&_this->vector);
     }
+
+    critical_section_exit();
+
+    if ( ! _this->_driver->_slot) {
+        return NULL;
+    }
+
+    // handle dispose preserves created vector slot
+    _this->vector.disable_slot_release_on_dispose(&_this->vector);
 
     _this->_handler = handler;
     _this->_handler_param = handler_param;

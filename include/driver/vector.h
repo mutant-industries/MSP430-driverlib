@@ -9,6 +9,7 @@
 #define _DRIVER_VECTOR_H_
 
 #include <msp430.h>
+#include <compiler.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <driver/disposable.h>
@@ -30,7 +31,7 @@
  * MSP430-gcc defines RESET_VECTOR number as ("reset"), therefore to determine reset vector number,
  * the 'preceding vector + 1' is used. Preceding is either SYSNMI_VECTOR or NMI_VECTOR on all devices.
  */
-#ifdef  __MSP430__
+#ifdef  _GCC_COMPILER_
 // msp430-gcc
 #ifdef SYSNMI_VECTOR
 #define RESET_VECTOR_NO             (SYSNMI_VECTOR + 1)
