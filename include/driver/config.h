@@ -39,7 +39,7 @@
 //#define __CRITICAL_SECTION_WDT_DEFAULT_SOURCE__     SMCLK
 
 /**
- * Count of general-purpose vector slots usually wrapped by drivers, default [8]
+ * count of general-purpose vector slots usually wrapped by drivers, default [8]
  */
 //#define __VECTOR_SLOT_COUNT__     8
 
@@ -55,6 +55,11 @@
  * handles for kernel timing, since it does not need the overflow handle anyway.
  */
 //#define __TIMER_A_LEGACY_SUPPORT__
+
+/**
+ * disable possibility to set SP register 20-bit wide when TI compiler is used (with GCC this has no effect)
+ */
+//#define __STACK_POINTER_20_BIT_SUPPORT_DISABLE__
 
 // -------------------------------------------------------------------------------------
 

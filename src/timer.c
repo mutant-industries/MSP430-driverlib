@@ -65,16 +65,17 @@ static uint8_t _start(Timer_channel_handle_t *_this) {
         result = TIMER_DRIVER_NOT_REGISTERED;
     }
     else if ( ! _this->active) {
+        if ( ! _this->_driver->_active_handles_cnt) {
+            hw_register_16(CTL_register) |= _this->_driver->_mode | TACLR;
+        }
+
         // vector.trigger() functionality not preserved when in capture mode
         if (_this->capture_mode || _this->handle_type == OVERFLOW) {
             _this->vector.set_enabled(&_this->vector, true);
+            _this->vector.clear_interrupt_flag(&_this->vector);
         }
         else {
             hw_register_16(_this->_CCTLn_register) &= ~CAP;
-        }
-
-        if ( ! _this->_driver->_active_handles_cnt) {
-            hw_register_16(CTL_register) |= _this->_driver->_mode;
         }
 
         _this->_driver->_active_handles_cnt++;
@@ -98,7 +99,7 @@ static uint8_t _stop(Timer_channel_handle_t *_this) {
     }
     else if (_this->active) {
         if (_this->_driver->_active_handles_cnt == 1) {
-            hw_register_16(CTL_register) &= ~(MC);
+            hw_register_16(CTL_register) &= ~MC;
         }
 
         if (_this->capture_mode || _this->handle_type == OVERFLOW) {
@@ -226,7 +227,7 @@ static void _shared_vector_handler(Timer_driver_t *driver) {
         return;
     }
 
-    handle = *((Timer_channel_handle_t **) (((uintptr_t)(&driver->_CCR0_handle)) + (interrupt_source * _POINTER_SIZE_ / 2)));
+    handle = *((Timer_channel_handle_t **) (((uintptr_t)(&driver->_CCR0_handle)) + (interrupt_source * _DATA_POINTER_SIZE_ / 2)));
 
     (*handle->_handler)(handle->_handler_param);
 }

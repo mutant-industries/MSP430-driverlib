@@ -21,10 +21,13 @@ static Vector_slot_t _vector_slot_array[__VECTOR_SLOT_COUNT__];
 #define __interrupt_handler_array_generator(no, _) __interrupt_handler_name_generator(no),
 
 // interrupt handler generator
-#define __interrupt_handler_generator(no, _)                                                            \
-void __attribute__((interrupt, section(".text:_isr"))) __interrupt_handler_name_generator(no) () {      \
-    Vector_slot_t *slot = &_vector_slot_array[no];                                                      \
-    (*slot->_handler)(slot->_handler_param);                                                            \
+#define __interrupt_handler_generator(no, _)                                                \
+__naked __interrupt void __interrupt_handler_name_generator(no) () {                        \
+    __asm__("   "__pushm__" #5, R15");                                                      \
+    Vector_slot_t *slot = &_vector_slot_array[no];                                          \
+    (*slot->_handler)(slot->_handler_param);                                                \
+    __asm__("   "__popm__" #5, R15");                                                       \
+    reti;                                                                                   \
 }
 
 // generate slot interrupt handler definitions

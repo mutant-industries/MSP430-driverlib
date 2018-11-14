@@ -67,7 +67,6 @@
  *   - VECTOR(PORT, BUTTON_PORT)        -> PORT5_VECTOR when BUTTON_PORT defined as '5'
  *   - VECTOR(EUSCI, IF_MAIN, _)        -> EUSCI_A0_VECTOR when IF_MAIN defined as 'A0'
  */
-#define __VOID__
 // variable-args macro  - https://stackoverflow.com/a/11763277
 #define _VECTOR_GET_MACRO(_1,_2,_3,NAME,...) NAME
 #define VECTOR(...) _VECTOR_GET_MACRO(__VA_ARGS__, _VECTOR_3, _VECTOR_2, _VECTOR_1)(__VA_ARGS__)

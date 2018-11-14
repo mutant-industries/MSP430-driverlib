@@ -5,10 +5,11 @@
  *  Copyright (c) 2018-2019 Mutant Industries ltd.
  */
 
-#ifndef _CPU_H_
-#define _CPU_H_
+#ifndef _DRIVER_CPU_H_
+#define _DRIVER_CPU_H_
 
 #include <stdint.h>
+#include <compiler.h>
 
 // -------------------------------------------------------------------------------------
 
@@ -19,10 +20,32 @@
     __asm__(" reti");
 
 /**
- * 16-bit SFR register type
+ * Core registers data type - depends on data pointer size (and thus on instructions used)
+ */
+#if defined(_DATA_MODEL_LARGE_)
+typedef uintptr_t data_pointer_register_t;
+#else
+typedef uint16_t data_pointer_register_t;
+#endif
+
+/**
+ * Instructions dependant on data memory model
+ */
+#if defined(_DATA_MODEL_LARGE_)
+#define __mov__     "MOV.A"
+#define __pushm__   "PUSHM.A"
+#define __popm__    "POPM.A"
+#else
+#define __mov__     "MOV.W"
+#define __pushm__   "PUSHM.W"
+#define __popm__    "POPM.W"
+#endif
+
+/**
+ * 16-bit SFR register manipulation
  */
 #define hw_register_16(x) \
     (*((volatile uint16_t *)((uint16_t) (x))))
 
 
-#endif /* _CPU_H_ */
+#endif /* _DRIVER_CPU_H_ */

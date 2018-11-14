@@ -7,7 +7,8 @@ project(MSP430-driverlib VERSION 0.1 LANGUAGES C)
 add_library(MSP430-driverlib
         src/disposable.c
         src/vector.c
-        src/timer.c)
+        src/timer.c
+        src/stack.c)
 
 target_include_directories(MSP430-driverlib
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>
