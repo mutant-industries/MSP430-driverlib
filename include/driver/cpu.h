@@ -19,10 +19,18 @@
 #define reti \
     __asm__(" reti");
 
+// -------------------------------------------------------------------------------------
+
+/**
+ * 16-bit SFR register manipulation
+ */
+#define hw_register_16(x) \
+    (*((volatile uint16_t *)((uint16_t) (x))))
+
 /**
  * Core registers data type - depends on data pointer size (and thus on instructions used)
  */
-#if defined(_DATA_MODEL_LARGE_)
+#if defined(_DATA_MODEL_LARGE_) || defined(_CODE_MODEL_LARGE_)
 typedef uintptr_t data_pointer_register_t;
 #else
 typedef uint16_t data_pointer_register_t;
@@ -31,7 +39,7 @@ typedef uint16_t data_pointer_register_t;
 /**
  * Instructions dependant on data memory model
  */
-#if defined(_DATA_MODEL_LARGE_)
+#if defined(_DATA_MODEL_LARGE_) || defined(_CODE_MODEL_LARGE_)
 #define __mov__     "MOV.A"
 #define __pushm__   "PUSHM.A"
 #define __popm__    "POPM.A"
@@ -40,12 +48,6 @@ typedef uint16_t data_pointer_register_t;
 #define __pushm__   "PUSHM.W"
 #define __popm__    "POPM.W"
 #endif
-
-/**
- * 16-bit SFR register manipulation
- */
-#define hw_register_16(x) \
-    (*((volatile uint16_t *)((uint16_t) (x))))
 
 
 #endif /* _DRIVER_CPU_H_ */

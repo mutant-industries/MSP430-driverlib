@@ -48,6 +48,8 @@
 #define _DATA_POINTER_SIZE_      2
 #endif
 
+// -------------------------------------------------------------------------------------
+
 /**
  * Interrupt function attribute, default placement in _isr section
  */
@@ -63,7 +65,18 @@
 #define __naked \
     __attribute__((naked))
 
-// -------------------------------------------------------------------------------------
+/**
+ * Noinit variable attribute - no initialization by C runtime startup code
+ */
+#define __noinit \
+    __attribute__((noinit))
 
+/**
+ * Persistent variable attribute - initialize only on program load
+ */
+#define __persistent \
+    __attribute__((persistent))
+
+// -------------------------------------------------------------------------------------
 
 #endif /* _COMPILER_H_ */

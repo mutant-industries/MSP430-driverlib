@@ -4,7 +4,7 @@
 #include <lib/cpp/repeat.h>
 #include <driver/vector.h>
 #include <driver/cpu.h>
-#include <driver/critical.h>
+#include <driver/interrupt.h>
 
 // -------------------------------------------------------------------------------------
 
@@ -140,7 +140,7 @@ static Vector_slot_t *_register_handler(Vector_handle_t *_this, void (*handler)(
         return NULL;
     }
 
-    critical_section_enter();
+    interrupt_suspend();
 
     dispose(_this->_slot);
 
@@ -153,7 +153,7 @@ static Vector_slot_t *_register_handler(Vector_handle_t *_this, void (*handler)(
         }
     }
 
-    critical_section_exit();
+    interrupt_restore();
 
     return _this->_slot;
 }

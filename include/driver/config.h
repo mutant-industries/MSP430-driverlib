@@ -31,12 +31,12 @@
 /**
  * completely disable GIE manipulation in critical sections
  */
-//#define __CRITICAL_SECTION_DISABLE__
+//#define __INTERRUPT_SUSPEND_DISABLE__
 
 /**
- * adjust WDT clock source for __critical_section_WDT_interval_enter() {@see __WDT_ssel()}, default [SMCLK]
+ * adjust WDT clock source for interrupt_suspend_WDT_interval() {@see __WDT_ssel()}, default [SMCLK]
  */
-//#define __CRITICAL_SECTION_WDT_DEFAULT_SOURCE__     SMCLK
+//#define __INTERRUPT_SUSPEND_WDT_DEFAULT_SOURCE__      SMCLK
 
 /**
  * count of general-purpose vector slots usually wrapped by drivers, default [8]

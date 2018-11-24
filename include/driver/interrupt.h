@@ -1,12 +1,12 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 /*
- *  Critical section enter / exit, WDT-protected critical section (header only)
+ *  Interrupts enable / disable, WDT-protected interrupt suspend (header only)
  *
  *  Copyright (c) 2018-2019 Mutant Industries ltd.
  */
 
-#ifndef _DRIVER_CRITICAL_H_
-#define _DRIVER_CRITICAL_H_
+#ifndef _DRIVER_INTERRUPT_H_
+#define _DRIVER_INTERRUPT_H_
 
 #include <stdint.h>
 #include <driver/config.h>
@@ -14,9 +14,20 @@
 
 // -------------------------------------------------------------------------------------
 
-#ifndef __CRITICAL_SECTION_WDT_DEFAULT_SOURCE__
-#define __CRITICAL_SECTION_WDT_DEFAULT_SOURCE__   SMCLK
+#ifndef __INTERRUPT_SUSPEND_WDT_DEFAULT_SOURCE__
+#define __INTERRUPT_SUSPEND_WDT_DEFAULT_SOURCE__   SMCLK
 #endif
+
+// -------------------------------------------------------------------------------------
+
+/**
+ * Global interrupt enable / disable
+ */
+#define interrupt_enable() \
+    __enable_interrupt();
+
+#define interrupt_disable() \
+    __disable_interrupt();
 
 // -------------------------------------------------------------------------------------
 
@@ -24,46 +35,46 @@
  * Save status register, disable interrupt,
  * save current WDT state, clear and set WDT for specified clock cycle count, set default WDT clock source
  */
-#define critical_section_WDT_interval_enter(clock_cycle_cnt) \
-    critical_section_enter(); \
-    WDT_backup_clr_ssel_interval(__CRITICAL_SECTION_WDT_DEFAULT_SOURCE__, clock_cycle_cnt);
+#define interrupt_suspend_WDT_interval(clock_cycle_cnt) \
+    interrupt_suspend(); \
+    WDT_backup_clr_ssel_interval(__INTERRUPT_SUSPEND_WDT_DEFAULT_SOURCE__, clock_cycle_cnt);
 
 /**
  * Save status register, disable interrupt,
  * save current WDT state, clear and set WDT for specified clock cycle count, set WDT clock source
  */
-#define critical_section_WDT_ssel_interval_enter(source, clock_cycle_cnt) \
-    critical_section_enter(); \
+#define interrupt_suspend_WDT_ssel_interval(source, clock_cycle_cnt) \
+    interrupt_suspend(); \
     WDT_backup_clr_ssel_interval(source, clock_cycle_cnt);
 
 /**
  * Recover saved state of status register, recover saved state of WDT, clear WDT
  */
-#define critical_section_WDT_exit() \
+#define interrupt_restore_WDT() \
     WDT_clr_restore(); \
-    critical_section_exit();
+    interrupt_restore();
 
 // -------------------------------------------------------------------------------------
 
-#ifndef __CRITICAL_SECTION_DISABLE__
+#ifndef __INTERRUPT_SUSPEND_DISABLE__
 
 /**
  * Save status register and disable interrupt. The _SR_ variable has to be local to allow nesting.
  */
-#define critical_section_enter() \
+#define interrupt_suspend() \
     uint16_t _SR_ = __get_SR_register(); \
-    __disable_interrupt();
+    interrupt_disable();
 
 /**
  * Recover saved state of status register.
  */
-#define critical_section_exit() \
+#define interrupt_restore() \
     __set_interrupt_state(_SR_);
 
 #else
-#define critical_section_enter()
-#define critical_section_exit()
+#define interrupt_suspend()
+#define interrupt_restore()
 #endif
 
 
-#endif /* _DRIVER_CRITICAL_H_ */
+#endif /* _DRIVER_INTERRUPT_H_ */

@@ -4,7 +4,7 @@
 #include <compiler.h>
 #include <driver/timer.h>
 #include <driver/cpu.h>
-#include <driver/critical.h>
+#include <driver/interrupt.h>
 
 // -------------------------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ static uint8_t _start(Timer_channel_handle_t *_this) {
     uint16_t CTL_register;
     uint8_t result = TIMER_OK;
 
-    critical_section_enter();
+    interrupt_suspend();
 
     // check whether driver is not disposed already
     if ( ! (CTL_register = _this->_driver->_CTL_register)) {
@@ -82,7 +82,7 @@ static uint8_t _start(Timer_channel_handle_t *_this) {
         _this->active = true;
     }
 
-    critical_section_exit();
+    interrupt_restore();
 
     return result;
 }
@@ -91,7 +91,7 @@ static uint8_t _stop(Timer_channel_handle_t *_this) {
     uint16_t CTL_register;
     uint8_t result = TIMER_OK;
 
-    critical_section_enter();
+    interrupt_suspend();
 
     // check whether driver is not disposed already
     if ( ! (CTL_register = _this->_driver->_CTL_register)) {
@@ -116,7 +116,7 @@ static uint8_t _stop(Timer_channel_handle_t *_this) {
         _this->active = false;
     }
 
-    critical_section_exit();
+    interrupt_restore();
 
     return result;
 }
@@ -125,7 +125,7 @@ static uint8_t _reset(Timer_channel_handle_t *_this) {
     uint16_t CTL_register;
     uint8_t result = TIMER_REFUSED;
 
-    critical_section_enter();
+    interrupt_suspend();
     // check whether driver is not disposed already
     if ( ! (CTL_register = _this->_driver->_CTL_register)) {
         result = TIMER_DRIVER_NOT_REGISTERED;
@@ -137,7 +137,7 @@ static uint8_t _reset(Timer_channel_handle_t *_this) {
         result = TIMER_OK;
     }
 
-    critical_section_exit();
+    interrupt_restore();
 
     return result;
 }
@@ -234,13 +234,13 @@ static void _shared_vector_handler(Timer_driver_t *driver) {
 
 static Vector_slot_t * _register_handler_shared(Timer_channel_handle_t *_this, void (*handler)(void *), void *handler_param) {
 
-    critical_section_enter();
+    interrupt_suspend();
 
     if ( ! _this->_driver->_slot) {
         _this->_driver->_slot = _this->_register_handler_parent(&_this->vector, (void (*)(void *)) _shared_vector_handler, _this->_driver);
     }
 
-    critical_section_exit();
+    interrupt_restore();
 
     if ( ! _this->_driver->_slot) {
         return NULL;
@@ -306,7 +306,7 @@ static uint8_t _channel_handle_register(Timer_driver_t *_this, Timer_channel_han
     uint8_t vector_no = _this->_shared_vector_no;
     uint16_t interrupt_control_register, IE_mask, IFG_mask;
 
-    critical_section_enter();
+    interrupt_suspend();
 
     switch (handle_type) {
         case MAIN:
@@ -348,7 +348,7 @@ static uint8_t _channel_handle_register(Timer_driver_t *_this, Timer_channel_han
     }
 
     if ( ! handle_ref) {
-        critical_section_exit();
+        interrupt_restore();
         return TIMER_NO_HANDLE_AVAILABLE;
     }
 
@@ -366,7 +366,7 @@ static uint8_t _channel_handle_register(Timer_driver_t *_this, Timer_channel_han
     vector_handle_register(&handle->vector, (dispose_function_t) _timer_channel_handle_release, vector_no,
                            interrupt_control_register, IE_mask, interrupt_control_register, IFG_mask);
 
-    critical_section_exit();
+    interrupt_restore();
 
     handle->_handler = NULL;
     handle->_handler_param = NULL;
