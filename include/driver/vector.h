@@ -16,8 +16,27 @@
 
 // -------------------------------------------------------------------------------------
 
+#define _vector_handle_(_vector_handle)       ((Vector_handle_t *) (_vector_handle))
+#define _vector_slot_handler_(_handler)       ((vector_slot_handler_t) (_handler))
+
 /**
- * Vector handle public api return codes
+ * Vector handle public API access
+ */
+#define vector_trigger(_handle)                                     \
+            (_vector_handle_(_handle)->trigger(_vector_handle_(_handle)))
+#define vector_clear_interrupt_flag(_handle)                        \
+            (_vector_handle_(_handle)->clear_interrupt_flag(_vector_handle_(_handle)))
+#define vector_set_enabled(_handle, _enabled)                       \
+            (_vector_handle_(_handle)->set_enabled(_vector_handle_(_handle), _enabled))
+#define vector_register_raw_handler(_handle, _handler, _reversible) \
+            (_vector_handle_(_handle)->register_raw_handler(_vector_handle_(_handle), _handler, _reversible))
+#define vector_register_handler(_handle, _handler, _arg_1, _arg_2)  \
+            (_vector_handle_(_handle)->register_handler(_vector_handle_(_handle), _vector_slot_handler_(_handler), _arg_1, _arg_2))
+#define vector_disable_slot_release_on_dispose(_handle)             \
+            (_vector_handle_(_handle)->disable_slot_release_on_dispose(_vector_handle_(_handle)))
+
+/**
+ * Vector handle public API return codes
  */
 #define VECTOR_OK                   (0x00)
 #define VECTOR_IFG_REG_NOT_SET      (0x10)
@@ -80,27 +99,33 @@
 
 // -------------------------------------------------------------------------------------
 
+typedef struct Vector_handle Vector_handle_t;
+
+typedef void (*interrupt_service_t)(void);
+typedef void (*vector_slot_handler_t)(void *, void *);
+
 /**
  * Interrupt vector descriptor
  */
 typedef struct Vector_slot {
     // enable dispose(Vector_slot_t *)
     Disposable_t _disposable;
-    // vector interrupt service handler parameter
-    void *_handler_param;
+    // vector interrupt service handler arguments
+    void *_handler_arg_1;
+    void *_handler_arg_2;
     // address of interrupt vector
     uint8_t _vector_no;
     // original vector handler, restored on dispose
     uint16_t _vector_original_content;
     // vector interrupt service handler
-    void (*_handler)(void *);
+    vector_slot_handler_t _handler;
 
 } Vector_slot_t;
 
 /**
  * Single interrupt vector handle structure
  */
-typedef struct Vector_handle {
+struct Vector_handle {
     // enable dispose(Vector_handle_t *)
     Disposable_t _disposable;
     // address of interrupt vector
@@ -120,23 +145,23 @@ typedef struct Vector_handle {
     // original vector handler, restored on dispose
     uint16_t _vector_original_content;
 
-    // -------- public api --------
+    // -------- public --------
     // trigger interrupt, so that registered handler shall be executed
-    uint8_t (*trigger)(struct Vector_handle *_this);
+    uint8_t (*trigger)(Vector_handle_t *_this);
     // clearing (or reading IV reg) only required when flags are not cleared by HW
-    uint8_t (*clear_interrupt_flag)(struct Vector_handle *_this);
+    uint8_t (*clear_interrupt_flag)(Vector_handle_t *_this);
     // set / reset interrupt enable flag
-    uint8_t (*set_enabled)(struct Vector_handle *_this, bool enabled);
+    uint8_t (*set_enabled)(Vector_handle_t *_this, bool enabled);
     // register interrupt service routine for this vector, if reversible set, the original handler shall be restored on dispose
-    uint8_t (*register_raw_handler)(struct Vector_handle *_this, void (*handler)(void), bool reversible);
+    uint8_t (*register_raw_handler)(Vector_handle_t *_this, interrupt_service_t handler, bool reversible);
     // assign and register slot for this vector, so that handler shall be called with handler_param on interrupt
-    Vector_slot_t *(*register_handler)(struct Vector_handle *_this, void (*handler)(void *), void *handler_param);
+    Vector_slot_t *(*register_handler)(Vector_handle_t *_this, vector_slot_handler_t handler, void *arg_1, void *arg_2);
     // when vector_handle is disposed, possible assigned slot is also disposed - calling this function disables this behavior
-    uint8_t (*disable_slot_release_on_dispose)(struct Vector_handle *_this);
+    uint8_t (*disable_slot_release_on_dispose)(Vector_handle_t *_this);
     // interrupt enable state
     bool enabled;
 
-} Vector_handle_t;
+};
 
 // -------------------------------------------------------------------------------------
 

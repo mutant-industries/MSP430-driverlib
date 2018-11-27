@@ -25,7 +25,7 @@ static Vector_slot_t _vector_slot_array[__VECTOR_SLOT_COUNT__];
 __naked __interrupt void __interrupt_handler_name_generator(no) () {                        \
     __asm__("   "__pushm__" #5, R15");                                                      \
     Vector_slot_t *slot = &_vector_slot_array[no];                                          \
-    (*slot->_handler)(slot->_handler_param);                                                \
+    slot->_handler(slot->_handler_arg_1, slot->_handler_arg_2);                             \
     __asm__("   "__popm__" #5, R15");                                                       \
     reti;                                                                                   \
 }
@@ -34,7 +34,7 @@ __naked __interrupt void __interrupt_handler_name_generator(no) () {            
 REPEAT(__VECTOR_SLOT_COUNT__, __interrupt_handler_generator)
 
 // generate array of pointers to previously generated handlers
-static void (*_vector_slot_handler_array[__VECTOR_SLOT_COUNT__])(void) = {
+static interrupt_service_t _vector_slot_handler_array[__VECTOR_SLOT_COUNT__] = {
     REPEAT(__VECTOR_SLOT_COUNT__, __interrupt_handler_array_generator)
 };
 
@@ -91,7 +91,7 @@ static uint8_t _set_enabled(Vector_handle_t *_this, bool enabled) {
     return VECTOR_OK;
 }
 
-static uint8_t _register_raw_handler(Vector_handle_t *_this, void (*handler)(void), bool reversible) {
+static uint8_t _register_raw_handler(Vector_handle_t *_this, interrupt_service_t handler, bool reversible) {
     if (reversible && ! _this->_vector_original_content) {
         _this->_vector_original_content = __vector(_this->_vector_no);
     }
@@ -104,7 +104,7 @@ static uint8_t _register_raw_handler(Vector_handle_t *_this, void (*handler)(voi
 // -------------------------------------------------------------------------------------
 
 // Vector_slot_t destructor
-static dispose_function_t _vector_slot_release(Vector_slot_t *_this) {
+static dispose_function_t _vector_slot_dispose(Vector_slot_t *_this) {
     if (_this->_vector_original_content) {
         __vector_set(_this->_vector_no, _this->_vector_original_content);
     }
@@ -115,25 +115,26 @@ static dispose_function_t _vector_slot_release(Vector_slot_t *_this) {
 }
 
 // Vector_slot_t constructor
-static void _vector_slot_register(Vector_slot_t *slot, uint8_t vector_no, void (*interrupt_handler)(void),
-              void (*handler)(void *), void *handler_param) {
+static void _vector_slot_register(Vector_slot_t *slot, uint8_t vector_no, interrupt_service_t  interrupt_handler,
+              vector_slot_handler_t handler, void *arg_1, void *arg_2) {
 
     // private
     slot->_handler = handler;
-    slot->_handler_param = handler_param;
+    slot->_handler_arg_1 = arg_1;
+    slot->_handler_arg_2 = arg_2;
     slot->_vector_no = vector_no;
     slot->_vector_original_content = __vector(slot->_vector_no);
 
     __vector_set(slot->_vector_no, interrupt_handler);
 
-    __dispose_hook_register(slot, _vector_slot_release);
+    __dispose_hook_register(slot, _vector_slot_dispose);
 }
 
 // -------------------------------------------------------------------------------------
 
-static Vector_slot_t *_register_handler(Vector_handle_t *_this, void (*handler)(void *), void *handler_param) {
+static Vector_slot_t *_register_handler(Vector_handle_t *_this, vector_slot_handler_t handler, void *arg_1, void *arg_2) {
     Vector_slot_t *slot_iter = _vector_slot_array;
-    void (**slot_handler_iter)(void) = _vector_slot_handler_array;
+    interrupt_service_t *slot_handler_iter = _vector_slot_handler_array;
     uint8_t i;
 
     if ( ! _this->_vector_no) {
@@ -147,7 +148,7 @@ static Vector_slot_t *_register_handler(Vector_handle_t *_this, void (*handler)(
     for (i = 0; i < __VECTOR_SLOT_COUNT__; i++, slot_iter++, slot_handler_iter++) {
         if ( ! slot_iter->_handler) {
             _this->_slot = slot_iter;
-            _vector_slot_register(_this->_slot, _this->_vector_no, *slot_handler_iter, handler, handler_param);
+            _vector_slot_register(_this->_slot, _this->_vector_no, *slot_handler_iter, handler, arg_1, arg_2);
 
             break;
         }
@@ -167,7 +168,7 @@ static uint8_t _disable_slot_release_on_dispose(Vector_handle_t *_this) {
 // -------------------------------------------------------------------------------------
 
 // Vector_handle_t destructor
-static dispose_function_t _vector_handle_release(Vector_handle_t *_this) {
+static dispose_function_t _vector_handle_dispose(Vector_handle_t *_this) {
 
     if (_this->set_enabled) {
         _this->set_enabled(_this, false);
@@ -206,7 +207,7 @@ void vector_handle_register(Vector_handle_t *handle, dispose_function_t dispose_
     handle->_slot = NULL;
     handle->_vector_original_content = NULL;
 
-    // public api
+    // public
     handle->trigger = _trigger;
     handle->clear_interrupt_flag = _clear_interrupt_flag;
     handle->set_enabled = _set_enabled;
@@ -218,5 +219,5 @@ void vector_handle_register(Vector_handle_t *handle, dispose_function_t dispose_
         handle->enabled = (bool) (hw_register_16(IE_register) & IE_mask);
     }
 
-    __dispose_hook_register(handle, _vector_handle_release);
+    __dispose_hook_register(handle, _vector_handle_dispose);
 }

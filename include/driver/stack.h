@@ -105,11 +105,11 @@ volatile register data_pointer_register_t __stack_pointer__ __asm__("R1");
 /**
  * Initialize context on deferred stack
  *  - store return address and decrement given 'aptr'
- *  - 5x decrement given 'aptr', store parameter to address, from which R12 shall be restored
+ *  - 12x decrement given 'aptr', store arguments to location, from which corresponding registers (R12, R13) shall be restored
  *  - after this operation, restore_context('aptr') and RETI can be executed, then:
- *   - execution starts at 'start_address', 'parameter' is passed to it
+ *   - execution starts at 'start_address', 'arg_1' and 'arg_2' are passed to it
  */
-#define deferred_stack_context_init(aptr, start_address, parameter) \
+#define deferred_stack_context_init(aptr, start_address, arg_1, arg_2) \
     uint16_t start_address_high = (uint16_t) (((uintptr_t) (start_address)) >> 16); \
     \
     (*(uint16_t **) (aptr))--; \
@@ -120,8 +120,9 @@ volatile register data_pointer_register_t __stack_pointer__ __asm__("R1");
     (*(data_pointer_register_t **) (aptr))--; /* R15 */ \
     (*(data_pointer_register_t **) (aptr))--; /* R14 */ \
     (*(data_pointer_register_t **) (aptr))--; /* R13 */ \
+    **(data_pointer_register_t **) (aptr) = (data_pointer_register_t) (arg_2); \
     (*(data_pointer_register_t **) (aptr))--; /* R12 */ \
-    **(data_pointer_register_t **) (aptr) = (data_pointer_register_t) (parameter); \
+    **(data_pointer_register_t **) (aptr) = (data_pointer_register_t) (arg_1); \
     (*(data_pointer_register_t **) (aptr))--; /* R11 */ \
     (*(data_pointer_register_t **) (aptr))--; /* R10 */ \
     (*(data_pointer_register_t **) (aptr))--; /* R9 */ \

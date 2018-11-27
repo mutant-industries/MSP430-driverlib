@@ -116,7 +116,7 @@
 #define WDT_clr_restore() \
     WDTCTL = WDTPW | WDTCNTCL | _WDT_STATE_;
 
-// ---------- private api --------------------
+// ---------- private --------------------
 
 /**
  * Save current WDT state - the _WDTIS_ variable has to be local to allow nesting.

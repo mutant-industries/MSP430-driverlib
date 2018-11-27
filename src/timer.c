@@ -71,8 +71,8 @@ static uint8_t _start(Timer_channel_handle_t *_this) {
 
         // vector.trigger() functionality not preserved when in capture mode
         if (_this->capture_mode || _this->handle_type == OVERFLOW) {
-            _this->vector.set_enabled(&_this->vector, true);
-            _this->vector.clear_interrupt_flag(&_this->vector);
+            vector_set_enabled(_this, true);
+            vector_clear_interrupt_flag(_this);
         }
         else {
             hw_register_16(_this->_CCTLn_register) &= ~CAP;
@@ -103,7 +103,7 @@ static uint8_t _stop(Timer_channel_handle_t *_this) {
         }
 
         if (_this->capture_mode || _this->handle_type == OVERFLOW) {
-            _this->vector.set_enabled(&_this->vector, false);
+            vector_set_enabled(_this, false);
         }
 
         // set capture mode (no matter what current operation of handle is)
@@ -179,7 +179,7 @@ static void _set_capture_mode(Timer_channel_handle_t *_this, uint16_t mode, uint
         // make sure that handle is not active when changing mode
         _this->stop(_this);
         // disable interrupts in case when changing from compare mode, handle.start() must be called to initiate capture
-        _this->vector.set_enabled(&_this->vector, false);
+        vector_set_enabled(_this, false);
     }
 
     hw_register_16(_this->_CCTLn_register) = (hw_register_16(_this->_CCTLn_register) & ~(CM | CCIS | SCS | OUTMOD)) |
@@ -206,7 +206,7 @@ static void _set_compare_mode(Timer_channel_handle_t *_this, uint16_t output_mod
     // compare mode - since timer started in capture mode with no capture, interrupt never triggers
     _this->capture_mode = false;
     // enable vector.trigger() functionality
-    _this->vector.set_enabled(&_this->vector, true);
+    vector_set_enabled(_this, true);
 }
 
 static uint16_t _get_capture_value(Timer_channel_handle_t *_this) {
@@ -229,15 +229,16 @@ static void _shared_vector_handler(Timer_driver_t *driver) {
 
     handle = *((Timer_channel_handle_t **) (((uintptr_t)(&driver->_CCR0_handle)) + (interrupt_source * _DATA_POINTER_SIZE_ / 2)));
 
-    (*handle->_handler)(handle->_handler_param);
+    handle->_handler(handle->_handler_arg_1, handle->_handler_arg_2);
 }
 
-static Vector_slot_t * _register_handler_shared(Timer_channel_handle_t *_this, void (*handler)(void *), void *handler_param) {
+static Vector_slot_t * _register_handler_shared(Timer_channel_handle_t *_this, vector_slot_handler_t handler, void *arg_1, void *arg_2) {
 
     interrupt_suspend();
 
     if ( ! _this->_driver->_slot) {
-        _this->_driver->_slot = _this->_register_handler_parent(&_this->vector, (void (*)(void *)) _shared_vector_handler, _this->_driver);
+        _this->_driver->_slot = _this->_register_handler_parent(&_this->vector,
+                (vector_slot_handler_t) _shared_vector_handler, _this->_driver, NULL);
     }
 
     interrupt_restore();
@@ -247,10 +248,11 @@ static Vector_slot_t * _register_handler_shared(Timer_channel_handle_t *_this, v
     }
 
     // handle dispose preserves created vector slot
-    _this->vector.disable_slot_release_on_dispose(&_this->vector);
+    vector_disable_slot_release_on_dispose(_this);
 
     _this->_handler = handler;
-    _this->_handler_param = handler_param;
+    _this->_handler_arg_1 = arg_1;
+    _this->_handler_arg_2 = arg_2;
 
     return _this->_driver->_slot;
 }
@@ -258,11 +260,12 @@ static Vector_slot_t * _register_handler_shared(Timer_channel_handle_t *_this, v
 // -------------------------------------------------------------------------------------
 
 // Timer_channel_handle_t destructor
-static dispose_function_t _timer_channel_handle_release(Timer_channel_handle_t *_this) {
+static dispose_function_t _timer_channel_handle_dispose(Timer_channel_handle_t *_this) {
 
     _this->stop(_this);
     _this->_handler = NULL;
-    _this->_handler_param = NULL;
+    _this->_handler_arg_1 = NULL;
+    _this->_handler_arg_2 = NULL;
 
     if (_this->handle_type == OVERFLOW) {
         _this->_driver->_overflow_handle = NULL;
@@ -363,22 +366,24 @@ static uint8_t _channel_handle_register(Timer_driver_t *_this, Timer_channel_han
     IE_mask = handle_type == OVERFLOW ? TAIE : CCIE;
     IFG_mask = handle_type == OVERFLOW ? TAIFG : CCIFG;
 
-    vector_handle_register(&handle->vector, (dispose_function_t) _timer_channel_handle_release, vector_no,
+    vector_handle_register(&handle->vector, (dispose_function_t) _timer_channel_handle_dispose, vector_no,
                            interrupt_control_register, IE_mask, interrupt_control_register, IFG_mask);
 
     interrupt_restore();
 
     handle->_handler = NULL;
-    handle->_handler_param = NULL;
+    handle->_handler_arg_1 = NULL;
+    handle->_handler_arg_2 = NULL;
     handle->_dispose_hook = dispose_hook;
 
-    // public api
+    // public
     if (handle_type != MAIN) {
         // disable assignment of raw handler to shared vector
-        handle->vector.register_raw_handler = (uint8_t (*)(Vector_handle_t *, void (*)(void), bool)) _unsupported_operation;
+        handle->vector.register_raw_handler = (uint8_t (*)(Vector_handle_t *, interrupt_service_t, bool)) _unsupported_operation;
         // override default register_handler on vector handle
         handle->_register_handler_parent = handle->vector.register_handler;
-        handle->vector.register_handler = (Vector_slot_t *(*)(Vector_handle_t *, void (*)(void *), void *)) _register_handler_shared;
+        handle->vector.register_handler = (Vector_slot_t *(*)(Vector_handle_t *,
+                vector_slot_handler_t, void *, void *)) _register_handler_shared;
     }
 
     handle->start = _start;
@@ -397,7 +402,7 @@ static uint8_t _channel_handle_register(Timer_driver_t *_this, Timer_channel_han
         // compare mode by default - since timer started in capture mode with no capture, interrupt never triggers
         handle->capture_mode = false;
         // enable vector.trigger() functionality
-        handle->vector.set_enabled(&handle->vector, true);
+        vector_set_enabled(handle, true);
         // reset capture / compare value
         hw_register_16(handle->_CCRn_register) = 0;
 
@@ -421,7 +426,7 @@ static uint8_t _channel_handle_register(Timer_driver_t *_this, Timer_channel_han
 // -------------------------------------------------------------------------------------
 
 // Vector_handle_t destructor
-static dispose_function_t _timer_driver_release(Timer_driver_t *_this) {
+static dispose_function_t _timer_driver_dispose(Timer_driver_t *_this) {
     uint8_t CCRx;
     Timer_channel_handle_t **handle_ref = &_this->_CCR0_handle;
 
@@ -457,7 +462,7 @@ void timer_driver_register(Timer_driver_t *driver, Timer_config_t *config, uint1
     driver->_mode = config->mode;
     driver->_available_handles_cnt = available_handles_cnt;
 
-    // public api
+    // public
     driver->channel_handle_register = _channel_handle_register;
 
     // timer stop, clear interrupt flag
@@ -469,5 +474,5 @@ void timer_driver_register(Timer_driver_t *driver, Timer_config_t *config, uint1
     hw_register_16(driver->_CTL_register + OFS_TAxEX0) = config->clock_source_divider_expansion;
 #endif
 
-    __dispose_hook_register(driver, _timer_driver_release);
+    __dispose_hook_register(driver, _timer_driver_dispose);
 }

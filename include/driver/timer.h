@@ -17,8 +17,38 @@
 
 // -------------------------------------------------------------------------------------
 
+#define _timer_driver_(_driver)                 ((Timer_driver_t *) (_driver))
+#define _timer_channel_handle_(_handle)         ((Timer_channel_handle_t *) (_handle))
+
 /**
- * Timer driver public api return codes
+ * Timer driver public API access
+ */
+#define timer_driver_channel_register(_driver, _handle, _handle_type, _dispose_hook)        \
+        (_timer_driver_(_driver)->channel_handle_register(_timer_driver_(_driver), _timer_channel_handle_(_handle), _handle_type, _dispose_hook))
+
+#define timer_channel_start(_handle)                                                        \
+        (_timer_channel_handle_(_handle)->start(_timer_channel_handle_(_handle)))
+#define timer_channel_stop(_handle)                                                         \
+        (_timer_channel_handle_(_handle)->stop(_timer_channel_handle_(_handle)))
+#define timer_channel_reset(_handle)                                                        \
+        (_timer_channel_handle_(_handle)->reset(_timer_channel_handle_(_handle)))
+#define timer_channel_get_counter(_handle, _target)                                         \
+        (_timer_channel_handle_(_handle)->get_counter(_timer_channel_handle_(_handle), (uint16_t *) (_target)))
+#define timer_channel_set_capture_mode(_handle, _mode, _input_select, _input_synchronize)   \
+        (_timer_channel_handle_(_handle)->set_capture_mode(_timer_channel_handle_(_handle), _mode, _input_select, _input_synchronize))
+#define timer_channel_is_capture_overflow_set(_handle)                                      \
+        (_timer_channel_handle_(_handle)->is_capture_overflow_set(_timer_channel_handle_(_handle)))
+#define timer_channel_set_compare_mode(_handle, _output_mode)                               \
+        (_timer_channel_handle_(_handle)->set_compare_mode(_timer_channel_handle_(_handle), _output_mode))
+#define timer_channel_get_capture_value(_handle)                                            \
+        (_timer_channel_handle_(_handle)->get_capture_value(_timer_channel_handle_(_handle)))
+#define timer_channel_set_compare_value(_handle, _value)                                    \
+        (_timer_channel_handle_(_handle)->set_compare_value(_timer_channel_handle_(_handle), (uint16_t) (_value)))
+#define timer_channel_is_active(_handle)                                                    \
+        _timer_channel_handle_(_handle)->active
+
+/**
+ * Timer driver public API return codes
  */
 #define TIMER_OK                        (0x00)
 #define TIMER_UNSUPPORTED_OPERATION     (0x20)
@@ -64,6 +94,7 @@
 
 // -------------------------------------------------------------------------------------
 
+typedef struct Timer_driver Timer_driver_t;
 typedef struct Timer_channel_handle Timer_channel_handle_t;
 
 typedef enum {
@@ -83,7 +114,7 @@ typedef enum {
     /**
      * Timer overflow handle
      *  - register_raw_handler on vector is disabled
-     *  - no capture / compare api
+     *  - no capture / compare API
      */
     OVERFLOW = 3
 
@@ -92,7 +123,7 @@ typedef enum {
 /**
  * Physical HW timer control
  */
-typedef struct Timer_driver {
+struct Timer_driver {
     // enable dispose(Timer_driver_t *)
     Disposable_t _disposable;
     // base of HW timer registers, (address of corresponding TxCTL register)
@@ -127,12 +158,12 @@ typedef struct Timer_driver {
     // active registers count ~ remaining handles count = _available_handles_cnt - _active_handles_cnt
     uint8_t _active_handles_cnt;
 
-    // -------- public api --------
+    // -------- public --------
     // register handle of given type with optional dispose hook
-    uint8_t (*channel_handle_register)(struct Timer_driver *_this, Timer_channel_handle_t *handle,
+    uint8_t (*channel_handle_register)(Timer_driver_t *_this, Timer_channel_handle_t *handle,
           Timer_handle_type handle_type, dispose_function_t dispose_hook);
 
-} Timer_driver_t;
+};
 
 /**
  * Single CCRn wrapper / overflow event wrapper
@@ -149,31 +180,32 @@ struct Timer_channel_handle {
 
     // -------- state --------
     // vector interrupt service handler
-    void (*_handler)(void *);
-    // vector interrupt service handler parameter
-    void *_handler_param;
+    vector_slot_handler_t _handler;
+    // vector interrupt service handler arguments
+    void *_handler_arg_1;
+    void *_handler_arg_2;
     // function to be called on dispose
     dispose_function_t _dispose_hook;
     // backup of original Vector_handle_t.register_handler
-    Vector_slot_t *(*_register_handler_parent)(Vector_handle_t *_this, void (*handler)(void *), void *handler_param);
+    Vector_slot_t *(*_register_handler_parent)(Vector_handle_t *_this, vector_slot_handler_t handler, void *arg_1, void *arg_2);
 
-    // -------- public api --------
+    // -------- public --------
     // enable interrupts triggered by handle-specific event, start timer driver if not started yet
-    uint8_t (*start)(struct Timer_channel_handle *_this);
+    uint8_t (*start)(Timer_channel_handle_t *_this);
     // disable interrupts triggered by handle-specific event, stop timer driver if all handles are inactive to conserve power
-    uint8_t (*stop)(struct Timer_channel_handle *_this);
+    uint8_t (*stop)(Timer_channel_handle_t *_this);
     // reset content of counter register - possible only when _this is the only active handle or no handles are active
-    uint8_t (*reset)(struct Timer_channel_handle *_this);
+    uint8_t (*reset)(Timer_channel_handle_t *_this);
     // get content of counter register (voting system)
-    uint8_t (*get_counter)(struct Timer_channel_handle *_this, uint16_t *);
+    uint8_t (*get_counter)(Timer_channel_handle_t *_this, uint16_t *);
     // ---- capture mode ----
     // params:
     //  - capture mode: CM__RISING | CM__FALLING | CM__BOTH
     //  - capture input select: CCIS__CCIA | CCIS__CCIB |d CCIS__GND | CCIS__VCC
     //  - capture input synchronize: SCS__SYNC | SCS__ASYNC
-    void (*set_capture_mode)(struct Timer_channel_handle *_this, uint16_t, uint16_t, uint16_t);
+    void (*set_capture_mode)(Timer_channel_handle_t *_this, uint16_t, uint16_t, uint16_t);
     // read and reset COV
-    bool (*is_capture_overflow_set)(struct Timer_channel_handle *_this);
+    bool (*is_capture_overflow_set)(Timer_channel_handle_t *_this);
     // ---- compare mode ----
     // params:
     //  - output mode:
@@ -185,11 +217,11 @@ struct Timer_channel_handle {
     //      OUTMOD_5 (Reset)
     //      OUTMOD_6 (PWM toggle/set)
     //      OUTMOD_7 (PWM reset/set)
-    void (*set_compare_mode)(struct Timer_channel_handle *_this, uint16_t);
+    void (*set_compare_mode)(Timer_channel_handle_t *_this, uint16_t);
     // get content of CCRn register
-    uint16_t (*get_capture_value)(struct Timer_channel_handle *_this);
+    uint16_t (*get_capture_value)(Timer_channel_handle_t *_this);
     // set content of CCRn register
-    void (*set_compare_value)(struct Timer_channel_handle *_this, uint16_t value);
+    void (*set_compare_value)(Timer_channel_handle_t *_this, uint16_t value);
     // handle type, read-only
     Timer_handle_type handle_type;
     // running + interrupt enabled state
