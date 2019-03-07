@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2018-2019 Mutant Industries ltd.
+#include <driver/timer.h>
 #include <stddef.h>
 #include <compiler.h>
-#include <driver/timer.h>
 #include <driver/cpu.h>
 #include <driver/interrupt.h>
 
@@ -227,12 +227,12 @@ static void _shared_vector_handler(Timer_driver_t *driver) {
         return;
     }
 
-    handle = *((Timer_channel_handle_t **) (((uintptr_t)(&driver->_CCR0_handle)) + (interrupt_source * _DATA_POINTER_SIZE_ / 2)));
+    handle = *((Timer_channel_handle_t **) (((uintptr_t) (&driver->_CCR0_handle)) + (interrupt_source * _DATA_POINTER_SIZE_ / 2)));
 
     handle->_handler(handle->_handler_arg_1, handle->_handler_arg_2);
 }
 
-static Vector_slot_t * _register_handler_shared(Timer_channel_handle_t *_this, vector_slot_handler_t handler, void *arg_1, void *arg_2) {
+static Vector_slot_t *_register_handler_shared(Timer_channel_handle_t *_this, vector_slot_handler_t handler, void *arg_1, void *arg_2) {
 
     interrupt_suspend();
 
@@ -425,7 +425,7 @@ static uint8_t _channel_handle_register(Timer_driver_t *_this, Timer_channel_han
 
 // -------------------------------------------------------------------------------------
 
-// Vector_handle_t destructor
+// Timer_driver_t destructor
 static dispose_function_t _timer_driver_dispose(Timer_driver_t *_this) {
     uint8_t CCRx;
     Timer_channel_handle_t **handle_ref = &_this->_CCR0_handle;

@@ -69,11 +69,17 @@
  * Recover saved state of status register.
  */
 #define interrupt_restore() \
-    __set_interrupt_state(_SR_);
+    interrupt_restore_with(0);
+
+/**
+ * Recover saved state of status register, set additional status register bits.
+ */
+#define interrupt_restore_with(bits) \
+    __set_interrupt_state(_SR_ | (bits));
 
 #else
 #define interrupt_suspend()
-#define interrupt_restore()
+#define interrupt_restore_with(bits)
 #endif
 
 

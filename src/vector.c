@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2018-2019 Mutant Industries ltd.
+#include <driver/vector.h>
 #include <stddef.h>
 #include <lib/cpp/repeat.h>
-#include <driver/vector.h>
 #include <driver/cpu.h>
 #include <driver/interrupt.h>
 
@@ -67,9 +67,6 @@ static uint8_t _clear_interrupt_flag(Vector_handle_t *_this) {
 }
 
 static uint8_t _set_enabled(Vector_handle_t *_this, bool enabled) {
-    if (_this->enabled == enabled) {
-        return VECTOR_OK;
-    }
 
     _this->enabled = enabled;
 

@@ -83,7 +83,7 @@ volatile register data_pointer_register_t __stack_pointer__ __asm__("R1");
  *  - stack pointer has predecrement behavior, the border address is not going to be written to
  */
 #define deferred_stack_pointer_init(aptr, stack_base_address, stack_size) \
-    *(data_pointer_register_t **) (aptr) = (data_pointer_register_t) ((uintptr_t) (stack_base_address) + (uint16_t) (stack_size));
+    *(data_pointer_register_t **) (aptr) = (data_pointer_register_t) (((uintptr_t) (stack_base_address) + (uint16_t) (stack_size)) & ~1);
 
 /**
  * Push return address on deferred stack
@@ -132,12 +132,19 @@ volatile register data_pointer_register_t __stack_pointer__ __asm__("R1");
     (*(data_pointer_register_t **) (aptr))--; /* R5 */ \
     (*(data_pointer_register_t **) (aptr))--; /* R4 */
 
+// --------------------------------------------------------------------------------------
+
 /**
  * Store return value on deferred stack to address, from which R12 shall be restored
  */
 #define deferred_stack_store_return_value(ptr, value) \
     ((data_pointer_register_t *) (ptr))[8] = (data_pointer_register_t) (value);
 
-// --------------------------------------------------------------------------------------
+/**
+ * Reset given bit mask on address on deferred stack, from which status register shall be restored
+ */
+#define deferred_stack_status_register_reset(ptr, bits) \
+    ((data_pointer_register_t *) (ptr))[12] &= ~bits;
+
 
 #endif /* _DRIVER_STACK_H_ */

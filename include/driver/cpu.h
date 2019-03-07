@@ -22,6 +22,12 @@
 // -------------------------------------------------------------------------------------
 
 /**
+ * 8-bit SFR register manipulation
+ */
+#define hw_register_8(x) \
+    (*((volatile uint8_t *)((uint16_t) (x))))
+
+/**
  * 16-bit SFR register manipulation
  */
 #define hw_register_16(x) \

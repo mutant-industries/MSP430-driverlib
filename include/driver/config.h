@@ -43,6 +43,8 @@
  */
 //#define __VECTOR_SLOT_COUNT__     8
 
+// -------------------------------------------------------------------------------------
+
 /**
  * MSP430 1xx, 2xx, 3xx and 4xx have only one Timer_A and (except 3xx) one Timer_B. On these devices the driver
  * cannot support both timers, since both have different (max) number of CCRn channels and IV register behaves differently.
@@ -55,6 +57,15 @@
  * handles for kernel timing, since it does not need the overflow handle anyway.
  */
 //#define __TIMER_A_LEGACY_SUPPORT__
+
+/**
+ * MSP430 1xx, 2xx, 3xx and 4xx port registers direct access support
+ *  - on these devices there are no PxIV (interrupt vector generator) registers, therefore it is not supported
+ * to register interrupt handlers via vector_register_handler(IO_pin_handle)
+ */
+//#define __IO_PORT_LEGACY_SUPPORT__
+
+// -------------------------------------------------------------------------------------
 
 /**
  * disable possibility to set SP register 20-bit wide when TI compiler is used (with GCC this has no effect)
