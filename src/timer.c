@@ -220,6 +220,7 @@ static void _set_compare_value(Timer_channel_handle_t *_this, uint16_t value) {
 // -------------------------------------------------------------------------------------
 
 static void _shared_vector_handler(Timer_driver_t *driver) {
+    uint8_t interrupt_channel_index;
     uint16_t interrupt_source;
     Timer_channel_handle_t *handle;
 
@@ -227,8 +228,12 @@ static void _shared_vector_handler(Timer_driver_t *driver) {
         return;
     }
 
-    handle = *((Timer_channel_handle_t **) (((uintptr_t) (&driver->_CCR0_handle)) + (interrupt_source * _DATA_POINTER_SIZE_ / 2)));
+    // IV -> channel number (0x00 - no interrupt, 0x02 - TxCCR1.CCIFG interrupt, 0x04 - TxCCR2.CCIFG interrupt...)
+    interrupt_channel_index = (uint8_t) (interrupt_source / 2 - 1);
 
+    handle = ((Timer_channel_handle_t **) &driver->_CCR1_handle)[interrupt_channel_index];
+
+    // execute handler with given handler arguments
     handle->_handler(handle->_handler_arg_1, handle->_handler_arg_2);
 }
 

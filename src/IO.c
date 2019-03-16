@@ -19,17 +19,18 @@ static uint8_t _unsupported_operation() {
 // -------------------------------------------------------------------------------------
 
 static void _shared_vector_handler(IO_port_driver_t *driver) {
-    uint8_t interrupt_source, interrupt_pin_no;
+    uint8_t interrupt_pin_no;
+    uint16_t interrupt_source;
     IO_pin_handle_t *handle;
 
-    if ( ! (interrupt_source = hw_register_8(driver->_IV_register))) {
+    if ( ! (interrupt_source = hw_register_16(driver->_IV_register))) {
         return;
     }
 
     // IV -> pin number (0x00 - no interrupt, 0x02 - PxIFG.0 interrupt, 0x04 - PxIFG.1 interrupt...)
     interrupt_pin_no = (uint8_t) (interrupt_source / 2 - 1);
 
-    handle = *((IO_pin_handle_t **) (((uintptr_t) (&driver->_pin0_handle)) + (interrupt_pin_no * _DATA_POINTER_SIZE_)));
+    handle = ((IO_pin_handle_t **) &driver->_pin0_handle)[interrupt_pin_no];
 
     // execute handler with given handler_arg and PIN_X that triggered interrupt
     handle->_handler(handle->_handler_arg, (void *) (((uint16_t) 0x0001) << interrupt_pin_no));
@@ -110,7 +111,7 @@ static uint8_t _pin_handle_register(IO_port_driver_t *_this, IO_pin_handle_t *ha
 
     interrupt_suspend();
 
-    // check whether handlers for given pins are registered already
+    // check whether handles for given pins are registered already
     for (pin = 1, handle_ref = &_this->_pin0_handle; pin; pin <<= 1, handle_ref++) {
         if (pin & pin_mask && *handle_ref) {
             interrupt_restore();

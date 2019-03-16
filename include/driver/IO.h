@@ -203,7 +203,7 @@
  *  - undefined for PORT_A - PORT_F
  */
 #ifndef __IO_PORT_LEGACY_SUPPORT__
-#define PORT_IV(NO)         hw_register_8(((PORT_BASE(NO)) + (_PORT_IV_EX_(NO))) & 0xFFFE)
+#define PORT_IV(NO)         hw_register_16(((PORT_BASE(NO)) + (_PORT_IV_EX_(NO))) & 0xFFFE)
 // expand parameter, odd port number offset from base +0x0E, even port number offset +0x1E
 #define _PORT_IV_EX_(NO)    ((0x000E) + ((((NO) & 0x0001) ^ 0x0001) << 4))
 #endif /* __IO_PORT_LEGACY_SUPPORT__ */
@@ -377,8 +377,6 @@ struct IO_pin_handle {
     void *_handler_arg;
 
 };
-
-// -------------------------------------------------------------------------------------
 
 /**
  * Initialize port driver

@@ -65,6 +65,12 @@
  */
 //#define __IO_PORT_LEGACY_SUPPORT__
 
+/**
+ * count of DMA channels, MSP430FR5xx and 6xx define count in __MSP430_HAS_DMA__ already, default [6]
+ *  - redefine to save some redundant pointers on DMA driver
+ */
+//#define __DMA_CONTROLLER_CHANNEL_COUNT__      6
+
 // -------------------------------------------------------------------------------------
 
 /**

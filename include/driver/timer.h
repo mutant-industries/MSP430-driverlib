@@ -197,13 +197,13 @@ struct Timer_channel_handle {
     // reset content of counter register - possible only when _this is the only active handle or no handles are active
     uint8_t (*reset)(Timer_channel_handle_t *_this);
     // get content of counter register (voting system)
-    uint8_t (*get_counter)(Timer_channel_handle_t *_this, uint16_t *);
+    uint8_t (*get_counter)(Timer_channel_handle_t *_this, uint16_t *target);
     // ---- capture mode ----
     // params:
     //  - capture mode: CM__RISING | CM__FALLING | CM__BOTH
     //  - capture input select: CCIS__CCIA | CCIS__CCIB |d CCIS__GND | CCIS__VCC
     //  - capture input synchronize: SCS__SYNC | SCS__ASYNC
-    void (*set_capture_mode)(Timer_channel_handle_t *_this, uint16_t, uint16_t, uint16_t);
+    void (*set_capture_mode)(Timer_channel_handle_t *_this, uint16_t mode, uint16_t input_select, uint16_t input_synchronize);
     // read and reset COV
     bool (*is_capture_overflow_set)(Timer_channel_handle_t *_this);
     // ---- compare mode ----
@@ -217,7 +217,7 @@ struct Timer_channel_handle {
     //      OUTMOD_5 (Reset)
     //      OUTMOD_6 (PWM toggle/set)
     //      OUTMOD_7 (PWM reset/set)
-    void (*set_compare_mode)(Timer_channel_handle_t *_this, uint16_t);
+    void (*set_compare_mode)(Timer_channel_handle_t *_this, uint16_t output_mode);
     // get content of CCRn register
     uint16_t (*get_capture_value)(Timer_channel_handle_t *_this);
     // set content of CCRn register

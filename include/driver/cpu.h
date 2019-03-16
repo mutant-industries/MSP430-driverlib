@@ -34,6 +34,12 @@
     (*((volatile uint16_t *)((uint16_t) (x))))
 
 /**
+ * address (16-bit / 20-bit) SFR register manipulation
+ */
+#define hw_register_addr(x) \
+    (*((volatile void **)((uint16_t) (x))))
+
+/**
  * Core registers data type - depends on data pointer size (and thus on instructions used)
  */
 #if defined(_DATA_MODEL_LARGE_) || defined(_CODE_MODEL_LARGE_)
