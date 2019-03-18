@@ -78,7 +78,7 @@
  *   - TIMER_A_VECTOR(2, 0)                             -> TIMER2_A0_VECTOR
  *   - TIMER_A_VECTOR(0, TIMER_VECTOR_MAIN)             -> TIMER0_A0_VECTOR
  *   - TIMER_A_VECTOR(TIMER_NO, TIMER_VECTOR_SHARED)    -> TIMER1_A1_VECTOR when TIMER_NO defined as '1'
- * __attribute__((interrupt(TIMER_VECTOR(timer_no, vector_no))))
+ * __attribute__((interrupt(TIMER_B_VECTOR(timer_no, vector_no))))
  *   - TIMER_B_VECTOR(2, 0)                             -> TIMER2_B0_VECTOR
  *   - TIMER_B_VECTOR(0, TIMER_VECTOR_MAIN)             -> TIMER0_B0_VECTOR
  *   - TIMER_B_VECTOR(TIMER_NO, TIMER_VECTOR_SHARED)    -> TIMER1_B1_VECTOR when TIMER_NO defined as '1'

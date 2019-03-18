@@ -173,13 +173,13 @@ struct DMA_channel_handle {
     uint8_t (*set_enabled)(DMA_channel_handle_t *_this, bool enabled);
     // DMA transfer trigger setter
     //  - trigger:
-    //      DMA5TSEL__DMAREQ
-    //      DMA5TSEL__TA0CCR0
-    //      DMA5TSEL__TA0CCR2
-    //      DMA5TSEL__TA1CCR0
-    //      DMA5TSEL__TA1CCR2
+    //      DMA0TSEL__DMAREQ
+    //      DMA0TSEL__TA0CCR0
+    //      DMA0TSEL__TA0CCR2
+    //      DMA0TSEL__TA1CCR0
+    //      DMA0TSEL__TA1CCR2
     //      ...
-    uint8_t (*select_trigger)(DMA_channel_handle_t *_this, uint8_t trigger);
+    uint8_t (*select_trigger)(DMA_channel_handle_t *_this, uint16_t trigger);
     // DMA control
     // params:
     //  - dma level: DMALEVEL__EDGE|DMALEVEL__LEVEL

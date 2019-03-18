@@ -30,12 +30,17 @@ static uint8_t _set_enabled(DMA_channel_handle_t *_this, bool enabled) {
     return DMA_OK;
 }
 
-static uint8_t _select_trigger(DMA_channel_handle_t *_this, uint8_t trigger) {
+static uint8_t _select_trigger(DMA_channel_handle_t *_this, uint16_t trigger) {
+    uint16_t trigger_mask;
 
     // DMAxTSEL bits should be modified only when the DMAEN bit is 0 (otherwise, unpredictable DMA triggers may occur)
     _set_enabled(_this, false);
 
-    hw_register_8(_this->_TSEL_register) = trigger;
+    // even channel has lower byte of TSEL register, odd channel has high byte of TSEL register
+    trigger_mask = (_this->_channel_index & 1) ? 0x00FF : 0xFF00;
+
+    // update only relevant part of TSEL register
+    hw_register_16(_this->_TSEL_register) = (hw_register_16(_this->_TSEL_register) & trigger_mask) | (trigger & ~trigger_mask);
 
     return DMA_OK;
 }
@@ -127,7 +132,7 @@ static dispose_function_t _dma_channel_handle_dispose(DMA_channel_handle_t *_thi
     _this->set_control(_this, DMALEVEL__EDGE, DMASRCBYTE__WORD, DMADSTBYTE__WORD, DMASRCINCR_0, DMADSTINCR_0, DMADT_0);
 
     _this->set_enabled = (uint8_t (*)(DMA_channel_handle_t *, bool)) _unsupported_operation;
-    _this->select_trigger = (uint8_t (*)(DMA_channel_handle_t *, uint8_t)) _unsupported_operation;
+    _this->select_trigger = (uint8_t (*)(DMA_channel_handle_t *, uint16_t)) _unsupported_operation;
     _this->set_control = (uint8_t (*)(DMA_channel_handle_t *, uint16_t, uint16_t, uint16_t, uint16_t, uint16_t, uint16_t)) _unsupported_operation;
     _this->is_abort_set = (bool (*)(DMA_channel_handle_t *)) _unsupported_operation;
 
@@ -139,8 +144,8 @@ static uint8_t _dma_channel_handle_register(DMA_driver_t *_this, DMA_channel_han
     DMA_channel_handle_t **handle_ref;
 
     handle->_CTL_register = _this->_base + ctl_offset;
-    // TSEL 8-bit access, DMA0TSEL - DMA0TSEL_0 (DMA_BASE + 0), DMA1TSEL - DMA0TSEL_1 (DMA_BASE + 1)...
-    handle->_TSEL_register = _this->_base + channel_index;
+    // TSEL 16-bit access, two channels share the same register
+    handle->_TSEL_register = _this->_base + (channel_index & ~1);
     handle->_channel_index = channel_index;
 
     interrupt_suspend();

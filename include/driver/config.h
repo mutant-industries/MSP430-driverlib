@@ -71,6 +71,16 @@
  */
 //#define __DMA_CONTROLLER_CHANNEL_COUNT__      6
 
+/**
+ * enable UART auto baudrate control manipulation via driver API
+ */
+//#define __UART_AUTO_BAUDRATE_CONTROL_ENABLE__
+
+/**
+ * enable UART IrDA control manipulation via driver API
+ */
+//#define __UART_IrDA_CONTROL_ENABLE__
+
 // -------------------------------------------------------------------------------------
 
 /**

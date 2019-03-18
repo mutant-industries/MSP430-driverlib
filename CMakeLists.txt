@@ -10,7 +10,10 @@ add_library(MSP430-driverlib
         src/timer.c
         src/stack.c
         src/IO.c
-        src/x5xx_x6xx/DMA.c)
+        src/x5xx_x6xx/DMA.c
+        src/eUSCI.c
+        src/eUSCI/UART.c
+        src/eUSCI/SPI.c)
 
 target_include_directories(MSP430-driverlib
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>
