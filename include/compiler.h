@@ -77,6 +77,12 @@
 #define __persistent \
     __attribute__((persistent))
 
+/**
+ * Aligned variable attribute - causes the compiler to allocate the variable on a x-byte boundary
+ */
+#define __aligned(x) \
+    __attribute__((aligned (x)))
+
 // -------------------------------------------------------------------------------------
 
 #endif /* _COMPILER_H_ */
