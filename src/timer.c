@@ -39,12 +39,36 @@
  */
 #if defined (OFS_TAxIV) && defined (OFS_TBxIV) && OFS_TAxIV == OFS_TBxIV
 #define OFS_TxIV    OFS_TAxIV
+#elif defined(__MSP430F5XX_6XX_FAMILY__)
+#define OFS_TxIV    (0x002E)
 #elif defined(__TIMER_A_LEGACY_SUPPORT__)
 // legacy Timer_A IV register offset (base addr 0x160, IV register addr 0x12E)
 #define OFS_TxIV        -(0x32)
 #else
 // legacy Timer_B IV register offset (base addr 0x180, IV register addr 0x11E)
 #define OFS_TxIV        -(0x62)
+#endif
+
+/**
+ * compatibility defines
+ */
+#if ! defined(CM)
+#define CM              (0xc000)        /* Capture mode */
+#endif
+#if ! defined(TASSEL)
+#define TASSEL          (0x0300)        /* TimerA clock source select */
+#endif
+#if ! defined(ID)
+#define ID              (0x00c0)        /* Input divider */
+#endif
+#if ! defined(MC)
+#define MC              (0x0030)        /* Mode control */
+#endif
+#if ! defined(OUTMOD)
+#define OUTMOD          (0x00e0)        /* Output mode */
+#endif
+#if ! defined(CCIS)
+#define CCIS            (0x3000)        /* Capture/compare input select */
 #endif
 
 /**
@@ -476,7 +500,7 @@ void timer_driver_register(Timer_driver_t *driver, Timer_config_t *config, uint1
     hw_register_16(driver->_CTL_register + OFS_TxCTL) |= config->clock_source | config->clock_source_divider | TACLR;
 #ifdef _TIMER_HAS_IDEX_
     // input divider expansion
-    hw_register_16(driver->_CTL_register + OFS_TAxEX0) = config->clock_source_divider_expansion;
+    hw_register_16(driver->_CTL_register + OFS_TxEX0) = config->clock_source_divider_expansion;
 #endif
 
     __dispose_hook_register(driver, _timer_driver_dispose);

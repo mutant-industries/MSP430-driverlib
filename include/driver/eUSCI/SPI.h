@@ -9,7 +9,6 @@
 #define _DRIVER_EUSCI_SPI_H_
 
 #include <driver/eUSCI.h>
-#include <driver/eUSCI.h>
 #include <stdbool.h>
 
 // -------------------------------------------------------------------------------------
@@ -72,7 +71,10 @@
 #define SPI_reset_enable(_driver) EUSCI_reset_enable(_driver)
 #define SPI_reset_disable(_driver) EUSCI_reset_disable(_driver)
 // status flags
-#define SPI_is_busy(_driver) ((bool) (SPI_status_reg(_driver) & UCBUSY_1))
+#define SPI_is_busy(_driver) ((bool) (SPI_status_reg(_driver) & UCBUSY))
+// status flags to be used when interrupts are not used
+#define SPI_is_RX_buffer_full(_driver) ((bool) (SPI_IFG_reg(_driver) & UCRXIFG))
+#define SPI_is_TX_buffer_empty(_driver) ((bool) (SPI_IFG_reg(_driver) & UCTXIFG))
 // interrupt control
 #define SPI_interrupt_enable(_driver, _mask) EUSCI_interrupt_enable(_driver, _mask)
 #define SPI_interrupt_disable(_driver, _mask) EUSCI_interrupt_disable(_driver, _mask)

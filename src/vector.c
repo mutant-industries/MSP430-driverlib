@@ -34,9 +34,39 @@ __naked __interrupt void __interrupt_handler_name_generator(no) () {            
 REPEAT(__VECTOR_SLOT_COUNT__, __interrupt_handler_generator)
 
 // generate array of pointers to previously generated handlers
-static interrupt_service_t _vector_slot_handler_array[__VECTOR_SLOT_COUNT__] = {
+static const interrupt_service_t _vector_slot_handler_array[__VECTOR_SLOT_COUNT__] = {
     REPEAT(__VECTOR_SLOT_COUNT__, __interrupt_handler_array_generator)
 };
+
+// -------------------------------------------------------------------------------------
+
+#ifdef __RAM_BASED_INTERRUPT_VECTORS_ADDRESS__
+
+static void _relocate_interrupt_vector_table() {
+
+    interrupt_suspend();
+
+    // already relocated check
+    if ( ! (SYSCTL & SYSRIVECT)) {
+
+#ifdef __RAM_BASED_INTERRUPT_VECTOR_TABLE_RELOCATE_CNT__
+        uint8_t i;
+        uint16_t *vector_current_original = (uint16_t *) 0xFFFE;
+        uint16_t *vector_current = (uint16_t *) (__RAM_BASED_INTERRUPT_VECTORS_ADDRESS__ - 1);
+
+        // move configured count of interrupt vectors to RAM
+        for (i = 0; i < __RAM_BASED_INTERRUPT_VECTOR_TABLE_RELOCATE_CNT__; i++, vector_current_original--, vector_current--) {
+            *vector_current = *vector_current_original;
+        }
+#endif
+
+        SYSCTL |= SYSRIVECT;
+    }
+
+    interrupt_restore();
+}
+
+#endif
 
 // -------------------------------------------------------------------------------------
 
@@ -93,6 +123,10 @@ static uint8_t _register_raw_handler(Vector_handle_t *_this, interrupt_service_t
         _this->_vector_original_content = __vector(_this->_vector_no);
     }
 
+#ifdef __RAM_BASED_INTERRUPT_VECTORS_ADDRESS__
+        _relocate_interrupt_vector_table();
+#endif
+
     __vector_set(_this->_vector_no, handler);
 
     return VECTOR_OK;
@@ -112,7 +146,7 @@ static dispose_function_t _vector_slot_dispose(Vector_slot_t *_this) {
 }
 
 // Vector_slot_t constructor
-static void _vector_slot_register(Vector_slot_t *slot, uint8_t vector_no, interrupt_service_t  interrupt_handler,
+static void _vector_slot_register(Vector_slot_t *slot, uint8_t vector_no, interrupt_service_t interrupt_handler,
               vector_slot_handler_t handler, void *arg_1, void *arg_2) {
 
     // private
@@ -121,6 +155,10 @@ static void _vector_slot_register(Vector_slot_t *slot, uint8_t vector_no, interr
     slot->_handler_arg_2 = arg_2;
     slot->_vector_no = vector_no;
     slot->_vector_original_content = __vector(slot->_vector_no);
+
+#ifdef __RAM_BASED_INTERRUPT_VECTORS_ADDRESS__
+    _relocate_interrupt_vector_table();
+#endif
 
     __vector_set(slot->_vector_no, interrupt_handler);
 
@@ -131,7 +169,7 @@ static void _vector_slot_register(Vector_slot_t *slot, uint8_t vector_no, interr
 
 static Vector_slot_t *_register_handler(Vector_handle_t *_this, vector_slot_handler_t handler, void *arg_1, void *arg_2) {
     Vector_slot_t *slot_iter = _vector_slot_array;
-    interrupt_service_t *slot_handler_iter = _vector_slot_handler_array;
+    interrupt_service_t *slot_handler_iter = (interrupt_service_t *) _vector_slot_handler_array;
     uint8_t i;
 
     if ( ! _this->_vector_no) {
@@ -140,15 +178,22 @@ static Vector_slot_t *_register_handler(Vector_handle_t *_this, vector_slot_hand
 
     interrupt_suspend();
 
-    dispose(_this->_slot);
+    if ( ! _this->_slot) {
+        for (i = 0; i < __VECTOR_SLOT_COUNT__; i++, slot_iter++, slot_handler_iter++) {
+            if ( ! slot_iter->_handler) {
+                _this->_slot = slot_iter;
 
-    for (i = 0; i < __VECTOR_SLOT_COUNT__; i++, slot_iter++, slot_handler_iter++) {
-        if ( ! slot_iter->_handler) {
-            _this->_slot = slot_iter;
-            _vector_slot_register(_this->_slot, _this->_vector_no, *slot_handler_iter, handler, arg_1, arg_2);
+                _vector_slot_register(_this->_slot, _this->_vector_no, *slot_handler_iter, handler, arg_1, arg_2);
 
-            break;
+                break;
+            }
         }
+    }
+    else {
+        // reuse already registered slot
+        _this->_slot->_handler = handler;
+        _this->_slot->_handler_arg_1 = arg_1;
+        _this->_slot->_handler_arg_2 = arg_2;
     }
 
     interrupt_restore();

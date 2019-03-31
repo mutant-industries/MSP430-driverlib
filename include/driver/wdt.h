@@ -15,6 +15,16 @@
 #include <msp430.h>
 #include <stdint.h>
 
+/**
+ * compatibility defines
+ */
+#if ! defined(WDTIS)
+#define WDTIS           (0x0007)        /* Watchdog timer interval select */
+#endif
+#if ! defined(WDTSSEL)
+#define WDTSSEL         (0x0060)        /* Watchdog timer clock source select */
+#endif
+
 // -------------------------------------------------------------------------------------
 
 #ifndef __WDT_INTERVAL_TIMER_MODE__
@@ -91,6 +101,12 @@
     WDT_hold();
 
 /**
+ * Save current WDT state to variable
+ */
+#define WDT_backup_to(target) \
+    *target = WDTCTL;
+
+/**
  * Save current WDT state, clear and set WDT for specified clock cycle count
  */
 #define WDT_backup_clr_interval(clock_cycle_cnt) \
@@ -116,6 +132,19 @@
 #define WDT_clr_restore() \
     WDTCTL = WDTPW | WDTCNTCL | _WDT_STATE_;
 
+
+/**
+ * Recover saved state of WDT from variable
+ */
+#define WDT_restore_from(state) \
+    WDTCTL = WDTPW | *((uint8_t *) state);
+
+/**
+ * Recover saved state of WDT from variable, clear WDT
+ */
+#define WDT_clr_restore_from(state) \
+    WDTCTL = WDTPW | WDTCNTCL | *((uint8_t *) state);
+
 // ---------- private --------------------
 
 /**
@@ -132,10 +161,13 @@
 
 #else
 #define WDT_backup_hold() WDT_hold()
+#define WDT_backup_to(target)
 #define WDT_backup_clr_interval(...)
 #define WDT_backup_clr_ssel_interval(...)
 #define WDT_restore()
 #define WDT_clr_restore()
+#define WDT_restore_from(state)
+#define WDT_clr_restore_from(state)
 #define __WDT_backup__()
 #define __WDT_set__(...)
 #endif

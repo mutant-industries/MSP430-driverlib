@@ -82,7 +82,7 @@ static void _shared_vector_handler(DMA_driver_t *driver) {
     handle = ((DMA_channel_handle_t **) &driver->_channel0_handle)[interrupt_channel_index];
 
     // execute handler with given handler arguments
-    handle->_handler(handle->_handler_arg_1, handle->_handler_arg_1);
+    handle->_handler(handle->_handler_arg_1, handle->_handler_arg_2);
 }
 
 static Vector_slot_t *_register_handler_shared(DMA_channel_handle_t *_this, vector_slot_handler_t handler, void *arg_1, void *arg_2) {

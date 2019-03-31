@@ -101,8 +101,11 @@
 #define UART_reset_enable(_driver) EUSCI_reset_enable(_driver)
 #define UART_reset_disable(_driver) EUSCI_reset_disable(_driver)
 // status flags
-#define UART_is_busy(_driver) ((bool) (UART_status_reg(_driver) & UCBUSY_1))
-#define UART_is_break_condition(_driver) ((bool) (UART_status_reg(_driver) & UCBRK_1))
+#define UART_is_busy(_driver) ((bool) (UART_status_reg(_driver) & UCBUSY))
+#define UART_is_break_condition(_driver) ((bool) (UART_status_reg(_driver) & UCBRK))
+// status flags to be used when interrupts are not used
+#define UART_is_RX_buffer_full(_driver) ((bool) (UART_IFG_reg(_driver) & UCRXIFG))
+#define UART_is_TX_buffer_empty(_driver) ((bool) (UART_IFG_reg(_driver) & UCTXIFG))
 // interrupt control
 #define UART_interrupt_enable(_driver, _mask) EUSCI_interrupt_enable(_driver, _mask)
 #define UART_interrupt_disable(_driver, _mask) EUSCI_interrupt_disable(_driver, _mask)

@@ -1,24 +1,26 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2018-2019 Mutant Industries ltd.
 #include <driver/CRC.h>
+#include <compiler.h>
 #include <driver/cpu.h>
 
 
 #ifdef __CRC_16_HW_SUPPORT__
 
-void _seed(CRC_driver_t *_, uint16_t seed) {
+
+static void _seed(CRC_driver_t *_, crc_16_t seed) {
     hw_register_16(CRC_BASE + OFS_CRCINIRES) = seed;
 }
 
-void _consume_byte(CRC_driver_t *_, uint8_t input) {
+static void _consume_byte(CRC_driver_t *_, uint8_t input) {
     hw_register_8(CRC_BASE + OFS_CRCDIRB) = input;
 }
 
-void _consume_word(CRC_driver_t *_, uint16_t input) {
+static void _consume_word(CRC_driver_t *_, uint16_t input) {
     hw_register_16(CRC_BASE + OFS_CRCDIRB) = input;
 }
 
-uint16_t _result(CRC_driver_t *_) {
+static crc_16_t _result(CRC_driver_t *_) {
     return hw_register_16(CRC_BASE + OFS_CRCINIRES);
 }
 
@@ -31,13 +33,13 @@ static bool _software_fallback_initialized;
 /**
  * CRC_CCITT lookup table (case when SW fallback is used)
  */
-__persistent static uint16_t _ccitt_crc_table[256];
+__noinit static uint16_t _ccitt_crc_table[256];
 
 /**
  * Based on 'A Painless Guide To CRC Error Detection Algorithms'
  *  - {@see http://www.ross.net/crc/download/crc_v3.txt}
  */
-void _generate_ccitt_crc_table() {
+static void _generate_ccitt_crc_table() {
     uint16_t i, j, high_bit_set, crc;
 
     for (i = 0; i < 256; i++) {
@@ -56,26 +58,26 @@ void _generate_ccitt_crc_table() {
     }
 }
 
-void _seed_fallback(CRC_driver_t *_this, uint16_t seed) {
+static void _seed_fallback(CRC_driver_t *_this, crc_16_t seed) {
     _this->_state = seed;
 }
 
-void _consume_byte_fallback(CRC_driver_t *_this, uint8_t input) {
+static void _consume_byte_fallback(CRC_driver_t *_this, uint8_t input) {
     _this->_state = _ccitt_crc_table[(_this->_state >> 8 ^ input) & 0xffU] ^ (_this->_state << 8);
 }
 
-void _consume_word_fallback(CRC_driver_t *_this, uint16_t input) {
+static void _consume_word_fallback(CRC_driver_t *_this, uint16_t input) {
     _this->_state = _ccitt_crc_table[(_this->_state >> 8 ^ (uint8_t) input) & 0xffU] ^ (_this->_state << 8);
     _this->_state = _ccitt_crc_table[(_this->_state >> 8 ^ (uint8_t) (input >> 8)) & 0xffU] ^ (_this->_state << 8);
 }
 
-uint16_t _result_fallback(CRC_driver_t *_this) {
+static crc_16_t _result_fallback(CRC_driver_t *_this) {
     return _this->_state;
 }
 
 // -------------------------------------------------------------------------------------
 
-static uint16_t _calculate(CRC_driver_t *_this, void *address, uint16_t size, uint16_t seed) {
+static uint16_t _calculate(CRC_driver_t *_this, void *address, uint16_t size, crc_16_t seed) {
     uintptr_t i = (uintptr_t) address;
 
     // nothing to be done

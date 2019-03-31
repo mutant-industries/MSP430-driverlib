@@ -193,7 +193,7 @@ static dispose_function_t _IO_port_driver_dispose(IO_port_driver_t *_this) {
 
 // IO_port_driver_t constructor
 void IO_port_driver_register(IO_port_driver_t *driver, uint8_t port_no, uint16_t base, uint8_t vector_no,
-        void (*port_init)(IO_port_driver_t *), uint8_t low_power_mode_pin_reset_filter) {
+        port_init_handler_t port_init, uint8_t low_power_mode_pin_reset_filter) {
 
     zerofill(driver);
 
@@ -254,6 +254,8 @@ void IO_wakeup_reinit() {
         for (handle_index = 0, handle_ref = &port->_pin0_handle; handle_index < 8; handle_index++, handle_ref++) {
             // search for first handle with registered interrupt handler
             if ((handle = *handle_ref) != NULL && handle->_handler) {
+                // reset reference to already released slot
+                handle->vector._slot = NULL;
                 // reinit (non-persistent) port vector slot
                 port->_slot = handle->_register_handler_parent(&handle->vector,
                         (vector_slot_handler_t) _shared_vector_handler, port, NULL);
@@ -311,9 +313,9 @@ void IO_low_power_mode_prepare() {
         pin_function_reset_mask ^= port->_low_power_mode_pin_reset_filter;
 
 #ifdef OFS_PxSELC
-        IO_port_reg_reset(port, SELC, pin_function_reset_mask);
+        IO_driver_reg_reset(port, SELC, pin_function_reset_mask);
 #else
-        IO_port_reg_reset(port, SEL0, pin_function_reset_mask);
+        IO_driver_reg_reset(port, SEL0, pin_function_reset_mask);
 #endif
     }
 }

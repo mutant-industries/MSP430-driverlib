@@ -63,10 +63,18 @@
 #endif
 
 /**
- * Get vector address by vector number (assume SYSRIVECT is not set).
+ * Get vector address by vector number.
  */
+#ifndef __RAM_BASED_INTERRUPT_VECTORS_ADDRESS__
+// only when interrupt vector table is writable (FRAM devices)
 #define __vector_ptr(no) \
         ((uint16_t *) (0xFFFE - ((RESET_VECTOR_NO - (no)) * 2)))
+#else
+// SYSRIVECT is set, interrupt vectors are relocated to RAM
+#define __vector_ptr(no) \
+        ((uint16_t *) (__RAM_BASED_INTERRUPT_VECTORS_ADDRESS__ - 1 - ((RESET_VECTOR_NO - (no)) * 2)))
+#endif
+
 
 /**
  * Get vector content by vector number.

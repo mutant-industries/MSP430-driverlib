@@ -3,6 +3,24 @@
 #include <driver/eUSCI/SPI.h>
 #include <stddef.h>
 
+// -------------------------------------------------------------------------------------
+
+/**
+ * compatibility defines
+ */
+#if ! defined(UCSSEL)
+#define UCSSEL          (0x00c0)        /* eUSCI_A clock source select */
+#endif
+#if ! defined(UCMODE)
+#define UCMODE          (0x0600)        /* eUSCI_A mode */
+#endif
+#if ! defined(UCSYNC_1)
+#define UCSYNC_1        (0x0100)        /* Synchronous mode */
+#endif
+#if ! defined(UCSTEM)
+#define UCSTEM          (0x0002)        /* STE mode select in master mode. */
+#endif
+
 // modulation is not used in SPI mode, and UCAxMCTL should be cleared when using SPI mode for eUSCI_A
 #if ! defined(OFS_UCA0MCTLW)
 #define OFS_UCA0MCTLW   (0x0008)
@@ -75,7 +93,7 @@ static uint8_t _set_loopback(SPI_driver_t *_this, bool enabled) {
     SPI_reset_enable(_this);
 
     // set / reset STATW.UCLISTEN bit
-    SPI_status_reg(_this) = (SPI_status_reg(_this) & ~UCLISTEN) | (enabled ? UCLISTEN_1 : UCLISTEN_0);
+    SPI_status_reg(_this) = (SPI_status_reg(_this) & ~UCLISTEN) | (enabled ? UCLISTEN : 0);
 
     return SPI_OK;
 }

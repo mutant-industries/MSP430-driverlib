@@ -54,7 +54,7 @@
  * Interrupt function attribute, default placement in _isr section
  */
 #define __interrupt_no(no) \
-    __attribute__((interrupt, section(".text:_isr")))
+    __attribute__((interrupt(no), section(".text:_isr")))
 
 #define __interrupt \
     __interrupt_no(__VOID__)

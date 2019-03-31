@@ -42,6 +42,8 @@
         (_timer_channel_handle_(_handle)->set_compare_mode(_timer_channel_handle_(_handle), _output_mode))
 #define timer_channel_get_capture_value(_handle)                                            \
         (_timer_channel_handle_(_handle)->get_capture_value(_timer_channel_handle_(_handle)))
+#define timer_channel_get_compare_value(_handle)                                            \
+        timer_channel_get_capture_value(_handle)
 #define timer_channel_set_compare_value(_handle, _value)                                    \
         (_timer_channel_handle_(_handle)->set_compare_value(_timer_channel_handle_(_handle), (uint16_t) (_value)))
 #define timer_channel_is_active(_handle)                                                    \
@@ -67,7 +69,11 @@
 #define TIMER_A_BASE(no)        __TIMER_BASE_EX__(A, no)
 #define TIMER_B_BASE(no)        __TIMER_BASE_EX__(B, no)
 // concatenation of expanded parameters
+#ifdef TA0_BASE
 #define __TIMER_BASE_EX__(prefix, no) T ## prefix ## no ## _BASE
+#else
+#define __TIMER_BASE_EX__(prefix, no) TIMER_ ## prefix ## no ## _BASE
+#endif
 
 /**
  * __attribute__((interrupt(TIMER_VECTOR(prefix, timer_no, vector_no))))

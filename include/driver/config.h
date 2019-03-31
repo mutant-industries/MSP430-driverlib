@@ -43,6 +43,20 @@
  */
 //#define __VECTOR_SLOT_COUNT__     8
 
+/**
+ * use ram-based interrupt vector table to allow runtime changes on flash devices
+ *  - must be defined on all flash devices if vector_register_handler() is to be used (used internally by most drivers)
+ *  - defines highest RAM address (top of RAM)
+ *  - please note that top of RAM is default placement for stack, if relocated vector table is to be used then stack must be placed elsewhere
+ */
+//#define __RAM_BASED_INTERRUPT_VECTORS_ADDRESS__     'TOP_OF_RAM'
+
+/**
+ * when ram-based interrupt vector table is used, current vectors can be relocated (copied) to RAM
+ *  - defines number of vectors that shall be copied to RAM (starting from RESET)
+ */
+//#define __RAM_BASED_INTERRUPT_VECTOR_TABLE_RELOCATE_CNT__     25
+
 // -------------------------------------------------------------------------------------
 
 /**
@@ -70,6 +84,13 @@
  *  - redefine to save some redundant pointers on DMA driver
  */
 //#define __DMA_CONTROLLER_CHANNEL_COUNT__      6
+
+// -------------------------------------------------------------------------------------
+
+/**
+ * support USCI modules on F5xx and F6xx devices
+ */
+//#define __USCI_LEGACY_SUPPORT__
 
 /**
  * enable UART auto baudrate control manipulation via driver API

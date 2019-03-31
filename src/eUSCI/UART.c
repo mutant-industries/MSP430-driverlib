@@ -5,6 +5,27 @@
 
 // -------------------------------------------------------------------------------------
 
+/**
+ * compatibility defines
+ */
+#if ! defined(UCSSEL)
+#define UCSSEL          (0x00c0)        /* eUSCI_A clock source select */
+#endif
+#if ! defined(UCMODE)
+#define UCMODE          (0x0600)        /* eUSCI_A mode */
+#endif
+#if ! defined(UCPEN_1)
+#define UCPEN_1         (0x8000)        /* Parity enabled */
+#endif
+#if ! defined(UCPAR__EVEN)
+#define UCPAR__EVEN     (0x4000)        /* Even parity */
+#endif
+#if ! defined(UC7BIT__8BIT)
+#define UC7BIT__8BIT    (0x0000)        /* 8-bit data */
+#endif
+
+// -------------------------------------------------------------------------------------
+
 static void _uart_vector_handler(UART_driver_t *driver) {
     uint8_t interrupt_handler_index;
     uint16_t interrupt_source;
@@ -50,12 +71,12 @@ static uint8_t _set_baudrate_config(UART_driver_t *_this, UART_baudrate_config_t
 
 static uint8_t _set_transfer_config(UART_driver_t *_this, uint16_t mode, UART_transfer_config_t *config) {
     uint16_t control;
-    
+
     UART_reset_enable(_this);
 
     // set requested mode
     control = (UART_control_reg(_this) & ~(UCMODE)) | mode;
-    
+
     if (config) {
         // clear configurable bits if config set
         control &= ~(UCPEN | UCPAR | UCMSB | UC7BIT | UCSPB);
@@ -72,7 +93,7 @@ static uint8_t _set_loopback(UART_driver_t *_this, bool enabled) {
     UART_reset_enable(_this);
 
     // set / reset STATW.UCLISTEN bit
-    UART_status_reg(_this) = (UART_status_reg(_this) & ~UCLISTEN) | (enabled ? UCLISTEN_1 : UCLISTEN_0);
+    UART_status_reg(_this) = (UART_status_reg(_this) & ~UCLISTEN) | (enabled ? UCLISTEN : 0);
 
     return UART_OK;
 }
@@ -143,7 +164,7 @@ void UART_driver_register(UART_driver_t *driver, uint16_t base, uint8_t vector_n
     EUSCI_driver_register(_EUSCI_driver_(driver), base , A, vector_no, (dispose_function_t) _uart_driver_dispose);
 
     // default UART mode, even parity, LSB first, 8-bit data, one stop bit
-    UART_control_reg(driver) = UCPEN_1 | UCPAR__EVEN | UCMSB_0 | UC7BIT__8BIT | UCSPB_0;
+    UART_control_reg(driver) = UCPEN_1 | UCPAR__EVEN | UC7BIT__8BIT;
     // disable loopback if set
     UART_status_reg(driver) &= ~UCLISTEN;
 

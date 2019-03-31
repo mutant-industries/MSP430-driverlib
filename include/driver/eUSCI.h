@@ -48,6 +48,8 @@
 #if defined(OFS_UCAxIE) && defined(OFS_UCBxIE)
 #define OFS_UCAxICTL    OFS_UCAxIE
 #define OFS_UCBxICTL    OFS_UCBxIE
+#elif defined(__USCI_LEGACY_SUPPORT__)
+#define OFS_UCAxICTL    (0x001C)
 #else
 #define OFS_UCAxICTL    (0x001A)
 #define OFS_UCBxICTL    (0x002A)
@@ -62,6 +64,9 @@
 #if defined(OFS_UCAxIFG) && defined(OFS_UCAxIV)
 #define OFS_ICTL_UCxIFG (OFS_UCAxIFG - OFS_UCAxICTL)
 #define OFS_ICTL_UCxIV  (OFS_UCAxIV - OFS_UCAxICTL)
+#elif defined(__USCI_LEGACY_SUPPORT__)
+#define OFS_ICTL_UCxIFG (0x0001)
+#define OFS_ICTL_UCxIV  (0x0002)
 #else
 #define OFS_ICTL_UCxIFG (0x0002)
 #define OFS_ICTL_UCxIV  (0x0004)
@@ -74,9 +79,9 @@
  *  - most devices define USCI_xx_VECTOR even when it is eUSCI device actually
  */
 #if defined(EUSCI_A0_VECTOR)
-#define _EUSCI_VECTOR_PREFIX_   EUSCI
+#define _EUSCI_PREFIX_   EUSCI
 #else
-#define _EUSCI_VECTOR_PREFIX_   USCI
+#define _EUSCI_PREFIX_   USCI
 #endif
 
 /**
@@ -84,11 +89,12 @@
  * EUSCI_A_BASE(1)              -> EUSCI_A1_BASE
  * EUSCI_B_BASE(INTERFACE_NO)   -> EUSCI_B1_BASE when INTERFACE_NO defined as '1'
  */
-#define EUSCI_BASE(type, no)    __EUSCI_BASE_EX__(type, no)
-#define EUSCI_A_BASE(no)        __EUSCI_BASE_EX__(A, no)
-#define EUSCI_B_BASE(no)        __EUSCI_BASE_EX__(B, no)
+#define EUSCI_BASE(type, no)    __EUSCI_BASE_EX__(_EUSCI_PREFIX_, type, no)
+#define EUSCI_A_BASE(no)        __EUSCI_BASE_EX__(_EUSCI_PREFIX_, A, no)
+#define EUSCI_B_BASE(no)        __EUSCI_BASE_EX__(_EUSCI_PREFIX_, B, no)
 // concatenation of expanded parameters
-#define __EUSCI_BASE_EX__(type, no) EUSCI_ ## type ## no ## _BASE
+#define __EUSCI_BASE_EX__(prefix, type, no) __EUSCI_BASE_EX_2__(prefix, type, no)
+#define __EUSCI_BASE_EX_2__(prefix, type, no) prefix ## _ ## type ## no ## _BASE
 
 /**
  * __attribute__((interrupt(EUSCI_VECTOR(type, no))))
@@ -102,9 +108,9 @@
  *   - EUSCI_B_VECTOR(2)                -> EUSCI_B2_VECTOR
  *   - EUSCI_B_VECTOR(INTERFACE_NO)     -> EUSCI_B1_VECTOR when INTERFACE_NO defined as '1'
  */
-#define EUSCI_VECTOR(type, no)   VECTOR(_EUSCI_VECTOR_PREFIX_, __EUSCI_VECTOR_EX__(type, no), _)
-#define EUSCI_A_VECTOR(no)       VECTOR(_EUSCI_VECTOR_PREFIX_, __EUSCI_VECTOR_EX__(A, no), _)
-#define EUSCI_B_VECTOR(no)       VECTOR(_EUSCI_VECTOR_PREFIX_, __EUSCI_VECTOR_EX__(B, no), _)
+#define EUSCI_VECTOR(type, no)   VECTOR(_EUSCI_PREFIX_, __EUSCI_VECTOR_EX__(type, no), _)
+#define EUSCI_A_VECTOR(no)       VECTOR(_EUSCI_PREFIX_, __EUSCI_VECTOR_EX__(A, no), _)
+#define EUSCI_B_VECTOR(no)       VECTOR(_EUSCI_PREFIX_, __EUSCI_VECTOR_EX__(B, no), _)
 // concatenation of expanded parameters
 #define __EUSCI_VECTOR_EX__(type, no)                   type ## no
 
@@ -126,9 +132,15 @@
 #define EUSCI_RX_buffer(_driver) hw_register_8(EUSCI_RX_buffer_address(_driver))
 #define EUSCI_TX_buffer(_driver) hw_register_8(EUSCI_TX_buffer_address(_driver))
 // interrupt control registers
+#ifndef __USCI_LEGACY_SUPPORT__
 #define EUSCI_IE_reg(_driver) hw_register_16(_EUSCI_driver_(_driver)->_IV_register - OFS_ICTL_UCxIV + OFS_ICTL_UCxIE)
 #define EUSCI_IFG_reg(_driver) hw_register_16(_EUSCI_driver_(_driver)->_IV_register - OFS_ICTL_UCxIV + OFS_ICTL_UCxIFG)
 #define EUSCI_IV_reg(_driver) hw_register_16(_EUSCI_driver_(_driver)->_IV_register)
+#else
+#define EUSCI_IE_reg(_driver) hw_register_8(_EUSCI_driver_(_driver)->_IV_register - OFS_ICTL_UCxIV + OFS_ICTL_UCxIE)
+#define EUSCI_IFG_reg(_driver) hw_register_8(_EUSCI_driver_(_driver)->_IV_register - OFS_ICTL_UCxIV + OFS_ICTL_UCxIFG)
+#define EUSCI_IV_reg(_driver) hw_register_8(_EUSCI_driver_(_driver)->_IV_register)
+#endif
 // RX / TX buffer address for DMA channel control
 #define EUSCI_RX_buffer_address(_driver) ((void *) (_EUSCI_driver_(_driver)->_CTLW0_register + OFS_UCxRXBUF))
 #define EUSCI_TX_buffer_address(_driver) ((void *) (_EUSCI_driver_(_driver)->_CTLW0_register + OFS_UCxTXBUF))

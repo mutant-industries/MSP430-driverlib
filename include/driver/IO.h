@@ -160,41 +160,70 @@
 /**
  * Port register offsets from base address
  */
-// models F5xx_6xx, FR5xx_6xx, FR2xx_4xx and FR57xx have predefined offsets
 #if defined(OFS_P1IN)
-#define OFS_PxIN            OFS_P1IN
-#define OFS_PxOUT           OFS_P1OUT
-#define OFS_PxDIR           OFS_P1DIR
-#define OFS_PxREN           OFS_P1REN
-#if defined(OFS_P1DS)
-// f5xx_6xx family only
-#define OFS_PxDS            OFS_P1DS
+#define  OFS_PxIN           OFS_P1IN
+#elif defined(P1IN)
+#define OFS_PxIN            &P1IN - &P1IN
 #endif
+
+#if defined(OFS_P1OUT)
+#define  OFS_PxOUT          OFS_P1OUT
+#elif defined(P1OUT)
+#define OFS_PxOUT           &P1OUT - &P1IN
+#endif
+
+#if defined(OFS_P1DIR)
+#define  OFS_PxDIR          OFS_P1DIR
+#elif defined(P1DIR)
+#define OFS_PxDIR           &P1DIR - &P1IN
+#endif
+
+#if defined(OFS_P1REN)
+#define  OFS_PxREN          OFS_P1REN
+#elif defined(P1REN)
+#define OFS_PxREN           &P1REN - &P1IN
+#endif
+
+// f5xx_6xx family only
+#if defined(OFS_P1DS)
+#define  OFS_PxDS           OFS_P1DS
+#elif defined(P1DS)
+#define OFS_PxDS            &P1DS - &P1IN
+#endif
+
 #if defined(OFS_P1SEL0) && defined(OFS_P1SEL1) && defined(OFS_P1SELC)
 #define OFS_PxSEL0          OFS_P1SEL0
 #define OFS_PxSEL1          OFS_P1SEL1
 #define OFS_PxSELC          OFS_P1SELC
-#elif defined(OFS_P1SEL)
+#elif defined(P1SEL0) && defined(P1SEL1) && defined(P1SELC)
+#define OFS_PxSEL0          &P1SEL0 - &P1IN
+#define OFS_PxSEL1          &P1SEL1 - &P1IN
+#define OFS_PxSELC          &P1SELC - &P1IN
+
 // f5xx_6xx family
-#define OFS_PxSEL0          OFS_P1SEL
+#elif defined(OFS_P1SEL)
+#define  OFS_PxSEL0         OFS_P1SEL
+#elif defined(P1SEL)
+#define OFS_PxSEL0          &P1SEL - &P1IN
 #endif
-#define OFS_PxIES           OFS_P1IES
-#define OFS_PxIE            OFS_P1IE
-#define OFS_PxIFG           OFS_P1IFG
-// 1xx, 2xx, 3xx and 4xx models (no 16-bit access)
-#elif defined(__IO_PORT_LEGACY_SUPPORT__)
-#define OFS_PxIN            (0x0000)
-#define OFS_PxOUT           (0x0001)
-#define OFS_PxDIR           (0x0002)
-#define OFS_PxIFG           (0x0003)
-#define OFS_PxIES           (0x0004)
-#define OFS_PxIE            (0x0005)
-#define OFS_PxSEL0          (0x0006)
-// not supported for 1xx and 4xx models
-#define OFS_PxSEL1          (0x0021)
-// not supported for 1xx and 3xx models
-#define OFS_PxREN           (0x0007)
-#endif /* __IO_PORT_LEGACY_SUPPORT__ */
+
+#if defined(OFS_P1IES)
+#define  OFS_PxIES          OFS_P1IES
+#elif defined(P1IES)
+#define OFS_PxIES           &P1IES - &P1IN
+#endif
+
+#if defined(OFS_P1IE)
+#define  OFS_PxIE           OFS_P1IE
+#elif defined(P1IE)
+#define OFS_PxIE            &P1IE - &P1IN
+#endif
+
+#if defined(OFS_P1IFG)
+#define  OFS_PxIFG          OFS_P1IFG
+#elif defined(P1IFG)
+#define OFS_PxIFG           &P1IFG - &P1IN
+#endif
 
 /**
  * Address of port interrupt vector generator
@@ -238,6 +267,13 @@
 #define PORT_REG_IE(NO)             PORT_REG(NO, OFS_PxIE)
 #define PORT_REG_IFG(NO)            PORT_REG(NO, OFS_PxIFG)
 
+// reg IN|OUT|DIR|REN|DS|SEL0|SEL1|SELC|IES|IE|IFG
+#define IO_port_reg(_port_no, _reg) _IO_port_reg_offset_(_port_no, OFS_Px ## _reg)
+#define IO_port_reg_set(_port_no, _reg, _mask) _IO_port_reg_offset_(_port_no, OFS_Px ## _reg) |= ((uint8_t) (_mask))
+#define IO_port_reg_reset(_port_no, _reg, _mask) _IO_port_reg_offset_(_port_no, OFS_Px ## _reg) &= ~((uint8_t) (_mask))
+#define IO_port_reg_toggle(_port_no, _reg, _mask) _IO_port_reg_offset_(_port_no, OFS_Px ## _reg) ^= ((uint8_t) (_mask))
+#define _IO_port_reg_offset_(_port_no, _offset) hw_register_8(PORT_BASE(_port_no) + (_offset))
+
 /**
  * Direct port 16-bit register access
  *  - PORT_A - PORT_F
@@ -275,12 +311,15 @@
 #define IO_port_handle_register(_driver, _handle, _pin_mask) \
     _IO_port_driver_(_driver)->pin_handle_register(_IO_port_driver_(_driver), _IO_pin_handle_(_handle), _pin_mask)
 
+// get (possibly) registered port by port number
+#define IO_port_driver(_port_no) registered_drivers[(_port_no) - 1]
+
 // reg IN|OUT|DIR|REN|DS|SEL0|SEL1|SELC|IES|IE|IFG
-#define IO_port_reg(_port, _reg) _IO_port_reg_offset_(_port, OFS_Px ## _reg)
-#define IO_port_reg_set(_port, _reg, _mask) _IO_port_reg_offset_(_port, OFS_Px ## _reg) |= ((uint8_t) (_mask))
-#define IO_port_reg_reset(_port, _reg, _mask) _IO_port_reg_offset_(_port, OFS_Px ## _reg) &= ~((uint8_t) (_mask))
-#define IO_port_reg_toggle(_port, _reg, _mask) _IO_port_reg_offset_(_port, OFS_Px ## _reg) ^= ((uint8_t) (_mask))
-#define _IO_port_reg_offset_(_port, _offset) hw_register_8((_port)->_base_register + (_offset))
+#define IO_driver_reg(_driver, _reg) _IO_driver_reg_offset_(_driver, OFS_Px ## _reg)
+#define IO_driver_reg_set(_driver, _reg, _mask) _IO_driver_reg_offset_(_driver, OFS_Px ## _reg) |= ((uint8_t) (_mask))
+#define IO_driver_reg_reset(_driver, _reg, _mask) _IO_driver_reg_offset_(_driver, OFS_Px ## _reg) &= ~((uint8_t) (_mask))
+#define IO_driver_reg_toggle(_driver, _reg, _mask) _IO_driver_reg_offset_(_driver, OFS_Px ## _reg) ^= ((uint8_t) (_mask))
+#define _IO_driver_reg_offset_(_driver, _offset) hw_register_8((_driver)->_base_register + (_offset))
 
 // reg IN|OUT|DIR|REN|DS|SEL0|SEL1|SELC|IES|IE|IFG
 #define IO_pin_handle_reg(_handle, _reg) _IO_pin_handle_reg_offset_(_handle, OFS_Px ## _reg)
@@ -314,8 +353,21 @@
 
 // -------------------------------------------------------------------------------------
 
+
 typedef struct IO_port_driver IO_port_driver_t;
 typedef struct IO_pin_handle IO_pin_handle_t;
+
+/**
+ * Port driver initialization routine, executed:
+ *  - after driver is created if not empty
+ *  - after system wakeup from LPMx.5 (on FRAM devices)
+ */
+typedef void (*port_init_handler_t)(IO_port_driver_t *_this);
+
+/**
+ * array of pointers to registered drivers
+ */
+extern IO_port_driver_t *registered_drivers[];
 
 /**
  * Physical IO port control
@@ -335,7 +387,7 @@ struct IO_port_driver {
     uint8_t _low_power_mode_pin_reset_filter;
 #ifndef __IO_PORT_LEGACY_SUPPORT__
     // if set then port state can be recovered after power-on-reset
-    void (*_port_init)(IO_port_driver_t *_this);
+    port_init_handler_t _port_init;
 #endif
     // -------- state --------
     IO_pin_handle_t *_pin0_handle;
@@ -391,7 +443,7 @@ struct IO_pin_handle {
  * shall be serviced via registered handlers, the order shall correspond to priorities of port interrupt vectors and pin interrupt flags
  */
 void IO_port_driver_register(IO_port_driver_t *driver, uint8_t port_no, uint16_t base, uint8_t vector_no,
-        void (*port_init)(IO_port_driver_t *), uint8_t low_power_mode_pin_reset_filter);
+        port_init_handler_t port_init, uint8_t low_power_mode_pin_reset_filter);
 
 // -------------------------------------------------------------------------------------
 
